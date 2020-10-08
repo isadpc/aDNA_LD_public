@@ -1,7 +1,9 @@
 cartopy
 matplotlib
 msprime
+numba
 numpy
 pre-commit
 scipy
+tqdm
 tskit
