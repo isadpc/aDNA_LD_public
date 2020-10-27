@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+"""Setup for public repository for aDNA and LD."""
+
 
 from setuptools import setup
 

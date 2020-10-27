@@ -12,3 +12,11 @@ repos:
     rev: 19.3b0
     hooks:
     -   id: black
+-   repo: https://github.com/pycqa/pydocstyle
+    rev: 4.0.0  # pick a git hash / tag to point to
+    hooks:
+    -   id: pydocstyle
+-   repo: https://gitlab.com/pycqa/flake8
+    rev: 3.7.9
+    hooks:
+    - id: flake8
