@@ -17,5 +17,5 @@ setup(
     packages=["aDNA_LD_public"],
     install_requires=required,
     long_description="See " + "https://github.com/aabiddanda/aDNA_LD_public",
-    license="MIT",
+    license="GPLv3",
 )
