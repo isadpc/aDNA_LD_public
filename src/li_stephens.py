@@ -2,7 +2,6 @@
 import numpy as np
 from numpy.random import binomial
 from numba import jit
-from scipy.optimize import minimize_scalar
 from scipy.optimize import minimize
 
 
@@ -178,7 +177,7 @@ class LiStephensHMM:
     def infer_scale(self, test_hap, eps=0.001, **kwargs):
         """Inferring scale by minimizing the marginal negative log-likelihood."""
         f = lambda s: self._negative_logll(test_hap, scale=s, eps=eps)  # noqa
-        ta = minimize_scalar(f, **kwargs)
+        ta = minimize(f, **kwargs)
         return ta
 
     def infer_params(self, test_hap, **kwargs):
