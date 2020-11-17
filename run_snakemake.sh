@@ -1,0 +1,1 @@
+snakemake -j100 --cluster-config config/cluster.json --cluster "sbatch -t {cluster.time} --mem-per-cpu {cluster.mem} -c {cluster.ncores} -o {cluster.out} -e {cluster.err} --partition={cluster.partition}" $*

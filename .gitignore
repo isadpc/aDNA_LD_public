@@ -1,0 +1,8 @@
+*.err
+*.out
+*.ipynb_checkpoints/
+*/*.ipynb_checkpoints/
+sandbox/
+.snakemake/*
+log/*
+src/__pycache__/*

@@ -14,12 +14,14 @@ The data here represents intermediate data sources to generate the plots in the 
 
 ## Snakemake
 
-The files in the `snakefiles` directory are not directly used in this setting, but can be used in conjunction with `snakemake` to rerun the entire raw analysis and replicate our simulation results entirely.
+The files in the `snakefiles` directory are not directly used in this setting, but can be used in conjunction with `snakemake` to rerun the entire analysis and replicate our simulation results fully.
+
+
 
 ## Source Code
 
 The `src` directory contains implementations of:
 
- 1. Coalescent simulations with serial sampling
+ 1. Coalescent simulations with serial sampling (including two )
  2. A python-based implementation of the Li-Stephens Model (using `numba`)
  3. Theoretical formulas for the correlation in tree-length and tree height across two loci in scenarios with serial sampling.

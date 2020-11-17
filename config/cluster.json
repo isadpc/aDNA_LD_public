@@ -1,0 +1,83 @@
+{
+	"__default__":
+	{
+      "time" : "2:00:00",
+      "mem": "1G",
+      "out": "log/{rule}-%j.out",
+      "err": "log/{rule}-%j.err",
+      "partition": "jnovembre",
+      "ncores": "1"
+	},
+	"extract_autosomes":
+	{
+		"time" : "5:00:00",
+		"mem": "5G",
+		"out": "log/{rule}-%j.out",
+		"err": "log/{rule}-%j.err",
+		"partition": "jnovembre",
+		"ncores": "5"
+	},
+	"get_1kg_variant_pos":
+	{
+		"time" : "5:00:00",
+		"mem": "5G",
+		"out": "log/{rule}-%j.out",
+		"err": "log/{rule}-%j.err",
+		"partition": "jnovembre",
+		"ncores": "10"
+	},
+    "kg_phase3_ancient_merge":
+	{
+      "time" : "6:00:00",
+      "mem": "5G",
+      "out": "log/{rule}-%j.out",
+      "err": "log/{rule}-%j.err",
+      "partition": "jnovembre",
+      "ncores": "1"
+	},
+	"paired_seg_sites":
+	{
+		"time" : "1:00:00",
+		"mem": "10G",
+		"out": "log/{rule}-%j.out",
+		"err": "log/{rule}-%j.err",
+		"partition": "jnovembre",
+		"ncores": "1"
+	},
+    "monte_carlo_sasb_sims":
+	{
+      "time" : "1:00:00",
+      "mem": "5G",
+      "out": "log/{rule}-%j.out",
+      "err": "log/{rule}-%j.err",
+      "partition": "jnovembre",
+      "ncores": "1"
+	},
+    "monte_carlo_sA_sB_est_chrom":
+	{
+      "time" : "1:00:00",
+      "mem": "5G",
+      "out": "log/{rule}-%j.out",
+      "err": "log/{rule}-%j.err",
+      "partition": "jnovembre",
+      "ncores": "1"
+	},
+    "monte_carlo_sA_sB_est_haploid_autosomes":
+	{
+      "time" : "1:00:00",
+      "mem": "5G",
+      "out": "log/{rule}-%j.out",
+      "err": "log/{rule}-%j.err",
+      "partition": "jnovembre",
+      "ncores": "1"
+	},
+    "infer_scale_serial_all_ascertained":
+	{
+      "time" : "2:00:00",
+      "mem": "5G",
+      "out": "log/{rule}-%j.out",
+      "err": "log/{rule}-%j.err",
+      "partition": "jnovembre",
+      "ncores": "1"
+	}
+}
