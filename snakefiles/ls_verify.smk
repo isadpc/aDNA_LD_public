@@ -19,7 +19,6 @@ from aDNA_coal_sim import *
 # Import configurations to add some things
 configfile: "config.yml"
 
-
 def ascertain_variants(hap_panel, pos, maf=0.05):
     """Ascertaining variants based on frequency."""
     assert((maf < 0.5) & (maf > 0))
@@ -29,14 +28,13 @@ def ascertain_variants(hap_panel, pos, maf=0.05):
     asc_pos = pos[idx]
     return(asc_panel, asc_pos, idx)
 
-
-# ------- 1. Generate a modern haplotype panel from Chr22 using the deCODE map ------- #
+# ------- 1. Generate a modern haplotype panel from ChrX using the deCODE map ------- #
 # - TODO : should we implement ascertainment as well.
 rule gen_hap_panel_real_map:
   input:
-    recmap = config['recmaps']['deCODE']['chr22']
+    recmap = config['recmaps']['deCODE']['chrX']
   output:
-    hap_panel = config['tmpdir'] + 'ls_verify/data/chr22_{n, \d+}_{rep,\d+}.panel.npz'
+    hap_panel = config['tmpdir'] + 'ls_verify/data/chrX_{n, \d+}_{rep,\d+}.panel.npz'
   run:
     df_recmap = pd.read_csv(input.recmap, sep='\s+')
     recmap = msp.RecombinationMap.read_hapmap(input.recmap)
@@ -90,7 +88,7 @@ rule infer_scale_real_map:
       res = ls_model.infer_scale(test_haps[i], eps=1e-2, bounds=(1.,1e6), method='bounded', tol=1e-7, options={'disp':3})
       scales_marg_hat[i] = res.x
       # Inferring the joint values
-      res_jt = ls_model.infer_params(test_haps[i], x0=[1e2,1e-3], bounds=[(1.,1e7), (1e-6,0.5)], tol=1e-7)
+      res_jt = ls_model.infer_params(test_haps[i], x0=[1e2,1e-3], bounds=[(1.,1e7), (1e-6,0.2)], tol=1e-7)
       scales_jt_hat[i] = res_jt.x[0]
       eps_jt_hat[i] = res_jt.x[1]
       se_scales_jt_hat[i] = np.sqrt(res_jt.hess_inv.todense()[0,0])
@@ -148,4 +146,4 @@ rule combine_ls_verify:
 
 rule full_verify:
   input:
-    expand('results/ls_verify/ls_simulations_{n}.csv', n=100)
+    expand('results/ls_verify/ls_simulations_{n}.csv', n=[100,200,400])

@@ -6,3 +6,4 @@ sandbox/
 .snakemake/*
 log/*
 src/__pycache__/*
+plots/
