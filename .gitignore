@@ -7,3 +7,4 @@ sandbox/
 log/*
 src/__pycache__/*
 plots/
+.python-version
