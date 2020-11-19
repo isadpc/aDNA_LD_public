@@ -146,4 +146,4 @@ rule combine_ls_verify:
 
 rule full_verify:
   input:
-    expand('results/ls_verify/ls_simulations_{n}.csv', n=[100,200,400])
+    expand('results/ls_verify/ls_simulations_{n}.csv', n=[100])
