@@ -47,7 +47,7 @@
     "monte_carlo_sasb_sims":
 	{
       "time" : "1:00:00",
-      "mem": "5G",
+      "mem": "8G",
       "out": "log/{rule}-%j.out",
       "err": "log/{rule}-%j.err",
       "partition": "jnovembre",
