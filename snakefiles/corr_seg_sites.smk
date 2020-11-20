@@ -39,6 +39,12 @@ rule estimate_autocorr_sA_Sb_sims:
     corr_SA_SB = np.vstack(corr_SA_SB).astype(np.float32)
     np.savez_compressed(output.autocorr, corr_SA_SB=corr_SA_SB, rec_dists=rec_dists)
 
+
+rule estimate_autocorr_sA_sB_sims:
+  input:
+    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_autocorr_L{L}_N{N}.npz', scenario=['SerialConstant','TennessenEuropean'], mod_n=1, n_anc=1, length=20, Ne=10000, ta=[0, 10000], L=[1000], N=200)
+
+
 rule monte_carlo_sasb_sims:
   input:
     expand(config['tmpdir'] + 'hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{rep}.npz', rep=np.arange(20))
@@ -59,20 +65,51 @@ rule monte_carlo_sasb_sims:
 
     # output slightly less
     rec_rate_mean, rec_rate_se, corr_s1_s2, se_r = corr_sim.gen_binned_rec_rate(bins='auto', range=(5e-6,1e-3))
-    np.savez_compressed(output.corr_SASB, rec_rate_mean=rec_rate_mean, rec_rate_se=rec_rate_se, corr_s1_s2=corr_s1_s2, se_r=se_r)
+    np.savez_compressed(output.corr_SASB,
+                        scenario=wildcards.scenario,
+                        ta = np.int32(wildcards.ta),
+                        L = np.int32(wildcards.L),
+                        N = np.int32(wildcards.N),
+                        rec_rate_mean=rec_rate_mean,
+                        rec_rate_se=rec_rate_se,
+                        corr_s1_s2=corr_s1_s2,
+                        se_r=se_r)
 
 
-rule estimate_autocorr_sA_sB_sims:
-  input:
-    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_autocorr_L{L}_N{N}.npz', scenario=['SerialConstant','TennessenEuropean'], mod_n=1, n_anc=1, length=20, Ne=10000, ta=[0, 10000], L=[1000], N=200)
-
+# Landing rule for generating the simulations ...
 rule estimate_monte_carlo_sA_sB_sims:
   input:
-    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_1_1_{ta}_20_Ne_10000_{seed}.monte_carlo_L{L}.N{N}.npz', scenario=['SerialConstant','TennessenEuropean'], ta=[0,10000], L=1000, N=200, seed=[42,24])
+    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_1_1_{ta}_20_Ne_10000_{seed}.monte_carlo_L{L}.N{N}.npz', scenario=['SerialConstant','TennessenEuropean'], ta=[0,10000], L=1000, N=200, seed=[42])
 
 
+rule monte_carlo_sA_sB_results:
+  input:
+    files=rules.estimate_monte_carlo_sA_sB_sims.input
+  output:
+    'results/corr_seg_sites/monte_carlo_sims_sA_sB_demography.csv'
+  run:
+    tot_df = []
+    for x in tqdm(input.files):
+      sim = np.load(x)
+      # Loading the specific entries
+      scenario = sim['scenario']
+      N = sim['N']
+      ta = sim['ta']
+      L = sim['L']
+      rec_rate_mean = sim['rec_rate_mean']
+      rec_rate_se = sim['rec_rate_se']
+      corr_s1_s2 = sim['corr_s1_s2']
+      se_r = sim['se_r']
+      # Do some light assertions
+      assert(rec_rate_mean.size == rec_rate_se.size)
+      assert(rec_rate_mean.size == corr_s1_s2.size)
+      for i in range(rec_rate_mean.size):
+        cur_row = [scenario, N, ta, L, rec_rate_mean[i], rec_rate_se[i], corr_s1_s2[i], se_r[i]]
+        tot_df.append(cur_row)
 
-
+    # generate the full output
+    final_df = pd.DataFrame(tot_df, columns=['scenario','N','ta','L','rec_rate_mean','rec_rate_se','corr_s1_s2','se_corr'])
+    final_df.to_csv(str(output), index=False, header=final_df.columns)
 
 
 
@@ -143,6 +180,37 @@ rule estimate_monte_carlo_sA_sB_sims:
 # rule est_Ne_ta_1kb_sim_final:
 #   input:
 #     expand('data/corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{seed}.monte_carlo_L{L}.N{N}.loco.npz', seed=42, Ne=10000, length=20, ta=[0,100,1000,10000], mod_n=1, n_anc=1, scenario=['SerialConstant', 'TennessenEuropean'], L=1000, N=200)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

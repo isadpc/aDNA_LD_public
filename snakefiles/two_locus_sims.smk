@@ -3,10 +3,10 @@
 import os
 import sys
 import numpy as np
-import msprime as msp
-import tszip
 import pandas as pd
 from tqdm import tqdm
+from scipy.stats import pearsonr
+
 
 # Import all of the functionality that we would need
 sys.path.append('src/')
@@ -105,11 +105,45 @@ rule run_two_locus_sims_scenarios:
     cur_two_locus._simulate()
     cur_two_locus._two_locus_branch_length()
     paired_branch_length = cur_two_locus.pair_branch_length / (2.*cur_two_locus.Ne)
-    np.savez(str(output), paired_branch_length=paired_branch_length, Ne=cur_two_locus.Ne)
+    # Saving the approach here ...
+    np.savez(str(output),
+             scenario=wildcards.scenario,
+             rec_rate=np.int32(wildcards.rec_rate),
+             ta=ta,
+             paired_branch_length=paired_branch_length,
+             Ne=cur_two_locus.Ne)
 
 
 rule run_sims_all:
   input:
-    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne10000.rep{nreps}.branch_length.npz', scenario=['Tennessen', 'IBDNeUK10K'], n0=1, na=1, ta=np.arange(0, 501, 50), rec_rate=4, nreps=50000),
     expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne{Ne}.rep{nreps}.branch_length.npz', scenario=['SerialConstant'], n0=1, na=1, ta=np.arange(0, 501, 50), rec_rate=4, Ne=[5000, 10000, 20000], nreps=50000),
+    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne10000.rep{nreps}.branch_length.npz', scenario=['Tennessen', 'IBDNeUK10K'], n0=1, na=1, ta=np.arange(0, 501, 50), rec_rate=4, nreps=50000),
     expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne{Ne}.rep{nreps}.branch_length.npz', scenario=['InstantGrowth7', 'InstantGrowth8', 'InstantGrowth9'], n0=1, na=1, ta=np.arange(0, 501, 50), rec_rate=4, Ne=[1000000], nreps=50000)
+
+
+rule combine_branch_length_est:
+  """Combine all of the branch length summary stats into a CSV that we can use later on."""
+  input:
+    files = rules.run_sims_all.input
+  output:
+    'results/two_loci/multi_scenario_branch_len.csv'
+  run:
+    tot_df = []
+    for x in tqdm(input.files):
+      # Setting up a data frame entries
+      df = np.load(x)
+      Ne = df['Ne']
+      paired_bl = df['paired_branch_length']
+      ta = df['ta']
+      scenario=df['scenario']
+      rec_rate=df['rec_rate']
+      # Compute statistics from the branch_lengths
+      corr_bl = pearsonr(paired_bl[:,0], paired_bl[:,1])[0]
+      cov_bl = np.cov(paired_bl[:,0], paired_bl[:,1])[0,0]
+      ebl = np.nanmean(paired_bl[:,0])
+      N = paired_bl.shape[0]
+      cur_row = [scenario, ta, rec_rate, corr_bl, cov_bl, ebl, Ne, N]
+      tot_df.append(cur_row)
+    # Creating the dataframe and outputting to a CSV
+    df_final = pd.DataFrame(tot_df, columns=['scenario','ta','rec_rate','corr_bl','cov_bl','exp_bl','Ne','Nreps'])
+    df_final.to_csv(str(output), index=False, header=df_final.columns)
