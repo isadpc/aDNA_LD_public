@@ -4,7 +4,7 @@ import os
 import sys
 import numpy as np
 import msprime as msp
-import tszip 
+import tszip
 import allel
 import pandas as pd
 from tqdm import tqdm
@@ -39,7 +39,7 @@ def ascertain_variants(hap_panel, pos, maf=0.05):
 
 
 
-###### --------- Simulations ----------- ###### 
+###### --------- Simulations ----------- ######
 # 'data/hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{rep}.npz'
 
 rule sim_demography_single_ancients:
@@ -71,7 +71,7 @@ rule sim_demography_single_ancients:
       cur_sim._add_samples(n_mod = mod_n, n_anc=[n_anc], t_anc=[ta])
     else:
       raise ValueError('Improper value input for this simulation!')
-    # Conducting the actual simulation ... 
+    # Conducting the actual simulation ...
     ts = cur_sim._simulate(mutation_rate=mut_rate, recombination_rate=rec_rate, length=length)
     tszip.compress(ts, str(output.treeseq))
     # Generating the haplotype reference panel...
@@ -90,52 +90,52 @@ rule check_corr_seg_sites:
   """
   input:
     expand(config['tmpdir'] + 'hap_copying/hap_panels/{scenario}/hap_panel_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{rep}.npz', mod_n=1, n_anc=1, rep=np.arange(20), scenario=['SerialConstant', 'TennessenEuropean'], ta=[0, 10000], length=20, Ne=10000)
-    
-    
 
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 rule sim_demography_multi_ancients:
   """
     Generate a tree-sequence of multiple ages
@@ -153,7 +153,7 @@ rule sim_demography_multi_ancients:
     assert(t_a_max % interval == 0)
     mod_n = np.int32(wildcards.mod_n)
     n_a = np.int32(wildcards.n_anc)
-    # Note we need to add in one so that we have an inclusive set 
+    # Note we need to add in one so that we have an inclusive set
     t_anc = np.arange(interval, t_a_max+1, interval).tolist()
     n_anc = np.repeat(n_a, len(t_anc)).tolist()
     scenario = wildcards.scenario
@@ -203,13 +203,13 @@ rule sim_demography_multi_ancients:
       cur_sim._add_samples(n_mod=mod_n, n_anc=n_anc, t_anc=t_anc)
     else:
       raise ValueError('Improper value input for this simulation!')
-    # Conducting the actual simulation ... 
+    # Conducting the actual simulation ...
     tree_seq = cur_sim._simulate(mutation_rate=mut_rate, recombination_rate=rec_rate, length=length)
     tszip.compress(tree_seq, str(output.treeseq))
-    
+
 rule create_hap_panel_all:
   """
-    Creates a haplotype panel for a joint simulation 
+    Creates a haplotype panel for a joint simulation
   """
   input:
     treeseq = rules.sim_demography_multi_ancients.output.treeseq
@@ -225,12 +225,12 @@ rule create_hap_panel_all:
     times = np.array([tree.time(x) for x in node_ids])
     np.savez_compressed(output.hap_panel, haps=geno, rec_pos=rec_pos, phys_pos=phys_pos, ta=times)
 
-           
+
 rule infer_scale_serial_all_ascertained:
-  """ 
-    Infer scale parameter using a naive Li-Stephens Model 
+  """
+    Infer scale parameter using a naive Li-Stephens Model
       and ascertaining to snps in the modern panel at a high-frequency
-    NOTE : should we have considerations for 
+    NOTE : should we have considerations for
   """
   input:
     hap_panel = rules.create_hap_panel_all.output.hap_panel
@@ -245,7 +245,7 @@ rule infer_scale_serial_all_ascertained:
     pos = cur_data['rec_pos']
     times = cur_data['ta']
     times = times.astype(np.float32)
-    # Testing things out here ... 
+    # Testing things out here ...
     mod_idx = np.where(times == 0)[0]
     ta_test = np.float32(wildcards.ta_samp)
     print(times, ta_test)
@@ -257,9 +257,9 @@ rule infer_scale_serial_all_ascertained:
     test_hap = hap_panel_test[ta_idx,:]
     mod_asc_panel, asc_pos, asc_idx = ascertain_variants(modern_hap_panel, pos, maf = np.int32(wildcards.asc)/100.)
     anc_asc_hap = test_hap[asc_idx]
-    
+
     afreq_mod = np.sum(mod_asc_panel, axis=1)
-    
+
     cur_hmm = LiStephensHMM(haps = mod_asc_panel, positions=asc_pos)
     # Setting theta here ...
     cur_hmm.theta = cur_hmm._infer_theta()
@@ -274,9 +274,9 @@ rule infer_scale_serial_all_ascertained:
     if mle_params['success']:
       cur_params = mle_params['x']
     model_params = np.array([mod_asc_panel.shape[0], asc_pos.size, ta_test])
-    np.savez(output.mle_hap_est, scales=scales, loglls=-neg_log_lls, scale=mle_scale['x'], params=cur_params, model_params=model_params, mod_freq = afreq_mod)    
+    np.savez(output.mle_hap_est, scales=scales, loglls=-neg_log_lls, scale=mle_scale['x'], params=cur_params, model_params=model_params, mod_freq = afreq_mod)
 
-    
+
 rule test_asc_scale_inf:
   input:
     expand('data/hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialConstant','TennessenEuropean','SerialBottleneck','SerialBottleneckLate'], ta=1000, interval=100, mod_n=100, n_anc=1, length=20, Ne=10000, rep=np.arange(5), asc=5, ta_samp=np.arange(100,1001,100))
@@ -297,13 +297,13 @@ rule create_hap_panel_test:
     # NOTE : here we are generating the underlying positions in morgans
     phys_pos = np.array([v.position for v in ts.variants()])
     rec_pos = phys_pos * rec_rate
-    # Getting the times up in here ... 
+    # Getting the times up in here ...
     tree = ts.first()
     node_ids = [s for s in ts.samples()]
     times = np.array([tree.time(x) for x in node_ids])
     np.savez_compressed(output.hap_panel, haps=geno, rec_pos=rec_pos, phys_pos=phys_pos, ta=times)
 
-    
+
 rule infer_scale_serial:
   """ Infer scale parameter using a naive Li-Stephens Algorithm """
   input:
@@ -336,14 +336,14 @@ rule infer_scale_serial:
     if mle_params['success']:
       cur_params = mle_params['x']
     model_params = np.array([modern_hap_panel.shape[0], pos.size])
-    np.savez(output.log_ll, scales=scales, loglls=-neg_log_lls, scale=mle_scale['x'], params=cur_params, model_params=model_params)    
+    np.savez(output.log_ll, scales=scales, loglls=-neg_log_lls, scale=mle_scale['x'], params=cur_params, model_params=model_params)
 
 
 rule infer_scale_serial_test_ascertained:
-  """ 
-    Infer scale parameter using a naive Li-Stephens Model 
+  """
+    Infer scale parameter using a naive Li-Stephens Model
       and ascertaining to snps in the modern panel at a high-frequency
-    NOTE : should we have considerations for 
+    NOTE : should we have considerations for
   """
   input:
     hap_panel = rules.create_hap_panel_test.output.hap_panel
@@ -358,7 +358,7 @@ rule infer_scale_serial_test_ascertained:
     pos = cur_data['rec_pos']
     times = cur_data['ta']
     times = times.astype(np.float32)
-    # Testing things out here ... 
+    # Testing things out here ...
     mod_idx = np.where(times == 0)[0]
     ta_test = np.int32(wildcards.ta)
     ta_idx = np.where(times == ta_test)[0][0]
@@ -368,9 +368,9 @@ rule infer_scale_serial_test_ascertained:
     test_hap = hap_panel_test[ta_idx,:]
     mod_asc_panel, asc_pos, asc_idx = ascertain_variants(modern_hap_panel, pos, maf = np.int32(wildcards.asc)/100.)
     anc_asc_hap = test_hap[asc_idx]
-    
+
     afreq_mod = np.sum(mod_asc_panel, axis=1)
-    
+
     cur_hmm = LiStephensHMM(haps = mod_asc_panel, positions=asc_pos)
     # Setting theta here ...
     cur_hmm.theta = cur_hmm._infer_theta()
@@ -385,31 +385,31 @@ rule infer_scale_serial_test_ascertained:
     if mle_params['success']:
       cur_params = mle_params['x']
     model_params = np.array([mod_asc_panel.shape[0], asc_pos.size, ta_test])
-    np.savez(output.log_ll, scales=scales, loglls=-neg_log_lls, scale=mle_scale['x'], params=cur_params, model_params=model_params, mod_freq = afreq_mod)        
-    
-    
+    np.savez(output.log_ll, scales=scales, loglls=-neg_log_lls, scale=mle_scale['x'], params=cur_params, model_params=model_params, mod_freq = afreq_mod)
+
+
 rule gen_all_hap_panels:
   input:
     expand('data/hap_copying/hap_panels/{scenario}/hap_panel_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{rep}.npz', mod_n=[100], n_anc=1, ta=[0], scenario=['SerialConstant'], length=20, rep=np.arange(10), Ne=Ne),
     expand('data/full_sim_all/{scenario}/generations_{ta}_{interval}/hap_panel_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.panel.npz', scenario='SerialConstant', ta=400, interval=5, mod_n=100, n_anc=1, length=40, Ne=10000, rep=np.arange(5)),
     expand('data/full_sim_all/{scenario}/generations_{ta}_{interval}/hap_panel_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.panel.npz', scenario='IBDNeUK10K', ta=400, interval=5, mod_n=100, n_anc=1, length=40, Ne=10000, rep=np.arange(5))
 
-    
+
 rule calc_infer_scales_all:
   """ Test rule to infer parameters under the LS-Model """
-  input: 
+  input:
     expand('data/hap_copying/mle_results/{scenario}/mle_scale_{mod_n}_{n_anc}_{ta}_{length}_Ne{Ne}_{rep}.scale.npz', mod_n=[100], n_anc=1, ta=np.arange(0,2001,100), scenario=['SerialConstant', 'SerialBottleneck', 'SerialBottleneckLate','TennessenEuropean'], length=20, rep=np.arange(10), Ne=Ne),
     expand('data/hap_copying/mle_results/{scenario}/mle_scale_{mod_n}_{n_anc}_{ta}_{length}_Ne{Ne}_{rep}.scale.npz', mod_n=100, n_anc=1, ta=np.arange(0,1001,100), scenario= ['SerialMigration_4','SerialMigration_3', 'SerialMigration_2', 'SerialMigration_1'], length=20, rep=np.arange(10), Ne=Ne),
 
 
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
 rule calc_infer_scales_asc_all_figures:
   """Rule to calculate all of the simulations for figures on haplotype copying models as a function of time
   """
@@ -420,13 +420,13 @@ rule calc_infer_scales_asc_all_figures:
     expand('data/hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialBottleneckInstant7', 'SerialBottleneckInstant8', 'SerialBottleneckInstant9'], ta=400, interval=5, mod_n=100, n_anc=1, length=40, Ne=1000000, rep=np.arange(5), asc=5, ta_samp=np.arange(5,401,5)),
     expand('data/hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SimpleGrowth1', 'SimpleGrowth2', 'SimpleGrowth3', 'SimpleGrowth4'], ta=400, interval=5, mod_n=100, n_anc=1, length=40, Ne=1000000, rep=np.arange(5), asc=5, ta_samp=np.arange(5,401,5))
 
-    
-    
-    
+
+
+
 rule calc_infer_scales_all_test_sample_size:
   input:
     expand('data/hap_copying/mle_results/{scenario}/mle_scale_{mod_n}_{n_anc}_{ta}_{length}_Ne{Ne}_{rep}.scale.npz', mod_n=[100,200,500], n_anc=1, ta=[10], scenario='SerialConstant', length=20, rep=np.arange(5), Ne=Ne)
-    
+
 
 #     expand('data/hap_copying/changepts/{scenario}/changepts_{mod_n}_{n_anc}_{ta}_{length}_Ne{Ne}_totals.npy', mod_n=[100], n_anc=1, ta=np.arange(0,2001,100), scenario='SerialConstant', Ne=Ne, length=20),
 # rule check_corr_seg_sites:
@@ -436,29 +436,29 @@ rule calc_infer_scales_all_test_sample_size:
 #   input:
 #     expand('data/hap_copying/hap_panels/{scenario}/hap_panel_{mod_n}_{n_anc}_{ta}_{length}_Ne_10000_{rep}.npz', mod_n=1, n_anc=1, rep=np.arange(20), scenario=['SerialConstant', 'TennessenEuropean'], ta=[0,100,1000, 10000], length=20)
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
 
-# -------- Error Checking ----------- # 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# -------- Error Checking ----------- #
 rule infer_scale_missing_data:
   """
-    Test effect of missing data on scale inference ... 
+    Test effect of missing data on scale inference ...
   """
   input:
     hap_panel = rules.create_hap_panel_test.output.hap_panel
@@ -497,14 +497,14 @@ rule infer_scale_missing_data:
     if mle_params['success']:
       cur_params = mle_params['x']
     model_params = np.array([n_indiv, n_snps, miss_prop, int(wildcards.ta)])
-    np.savez(output.log_ll, scales=scales, loglls=-neg_log_lls, scale=mle_scale['x'], mle_params=cur_params, model_params=model_params) 
-    
-    
+    np.savez(output.log_ll, scales=scales, loglls=-neg_log_lls, scale=mle_scale['x'], mle_params=cur_params, model_params=model_params)
+
+
 rule test_missing_scale_inference:
   input:
     expand('data/hap_copying/mle_results/{scenario}/missing_test/mle_scale_{mod_n}_{n_anc}_{ta}_{length}_Ne{Ne}_{rep}.miss_{miss}_{repmiss}.scale.npz', scenario='SerialConstant', mod_n=100, n_anc=1, ta=np.arange(0,1001,100), length=20, Ne=10000, rep=[0], miss=[0,5,25,50], repmiss=np.arange(5))
 
-# ----------  Simulate Chromosome w. Realistic Recombination Map   ----------- # 
+# ----------  Simulate Chromosome w. Realistic Recombination Map   ----------- #
 rule sim_format_recombination_map:
   input:
     recmap = 'data/maps_b37/maps_chr.{CHROM}'
@@ -526,7 +526,7 @@ rule sim_format_recombination_map:
     filtered_map = filtered_map[['Chromosome','Physical_Pos','cM/Mb', wildcards.genmap]]
     filtered_map.to_csv(output.recmap_hapmap_format, sep=' ', index=False)
 
-    
+
 rule gen_modern_hap_panel_real_map:
   input:
     recmap = rules.sim_format_recombination_map.output.recmap_hapmap_format
@@ -554,7 +554,7 @@ rule gen_modern_hap_panel_real_map:
     pos_filt = pos_filt[idx_diff]
     # TODO : do you just filter all positions that have zero recombinational distance between them?
     np.savez(output.hap_panel, haps=haps_filt.T, rec_pos=morgan_pos_filt, phys_pos=pos_filt)
-    
+
 rule infer_scale_simmed_real_map:
   input:
     hap_panel = rules.gen_modern_hap_panel_real_map.output.hap_panel
@@ -576,7 +576,7 @@ rule infer_scale_simmed_real_map:
       scales_hat[i] = inf_scale
     # Saving the output file
     np.savez(output.scale_inf, true_scales=scales_true, scales_hat=scales_hat)
-    
+
 rule infer_scales_real_genmap:
   input:
     expand('data/hap_copying/real_chrom_sims/results/chr{CHROM}_{genmap}.n{n}.scale_{scale_min}_{scale_max}.seed{seed}.rep{rep}.npz', seed=np.arange(1,11), rep=0, genmap='deCODE', CHROM=22, scale_max=2500, scale_min=100, n=[100])
@@ -604,60 +604,60 @@ rule infer_scale_simmed_uniform_map:
     # Saving the output file
     np.savez(output.scale_inf, true_scales=scales_true, scales_hat=scales_hat)
 
-    
+
 rule infer_scales_full_unif_map:
   input:
     expand('data/hap_copying/full_sim_results_unif/{scenario}/hap_panel_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{rep}.scale_{scale_min}_{scale_max}.seed{seed}.rep{rep}.npz', seed=np.arange(1,11), rep=0, genmap='deCODE', length=20, Ne=10000, scenario='SerialConstant', mod_n=[100], n_anc=[1], ta=[0], scale_max=2000, scale_min=100)
 
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-# ---------- Running a serial simulation according to the real Reich Lab Data  -----------# 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ---------- Running a serial simulation according to the real Reich Lab Data  -----------#
 
 gen_time = 30
 
 # TODO : should we simulate a specific chromosome?
 rule sim_serial_data_1kg_ceu_real_chrom:
   """
-    Simulating example data for the CEU setting  
+    Simulating example data for the CEU setting
   """
   input:
     recmap = rules.sim_format_recombination_map.output.recmap_hapmap_format,
     times_ceu_km = lambda wildcards: 'data/hap_copying/time_points/ceu_%dkm_ages.npy' % int(wildcards.km),
-    
+
   output:
     treeseq = 'data/full_sim_all/{scenario}/ceu_sim_{km, \d+}_{CHROM}_{genmap}/serial_coal_{mod_n, \d+}_Ne{Ne,\d+}_{rep,\d+}.treeseq.gz'
   wildcard_constraints:
@@ -692,13 +692,13 @@ rule sim_serial_data_1kg_ceu_real_chrom:
       cur_sim._add_samples(n_mod = mod_n, n_anc = n_anc, t_anc = t_anc)
     else:
       raise ValueError('Improper scenario input for this simulation!')
-    # Conducting the actual simulation ... 
+    # Conducting the actual simulation ...
     tree_seq = cur_sim._simulate(mutation_rate=mut_rate, recombination_map=recmap)
     tszip.compress(tree_seq, str(output.treeseq))
 
 rule create_hap_panel_1kg_ceu_real_chrom:
   """
-    Creates a haplotype panel for a joint simulation 
+    Creates a haplotype panel for a joint simulation
   """
   input:
     treeseq = rules.sim_serial_data_1kg_ceu_real_chrom.output.treeseq
@@ -715,13 +715,13 @@ rule create_hap_panel_1kg_ceu_real_chrom:
     node_ids = [s for s in ts.samples()]
     tree = ts.first()
     times = np.array([tree.time(x) for x in node_ids])
-    np.savez_compressed(output.hap_panel, haps=geno, rec_pos=rec_pos, phys_pos=phys_pos, ta=times)    
-    
+    np.savez_compressed(output.hap_panel, haps=geno, rec_pos=rec_pos, phys_pos=phys_pos, ta=times)
+
 
 rule infer_scale_serial_ascertained_ceu_sims:
-  """ 
-    Infer scale parameter using a naive Li-Stephens Model 
-      and ascertaining to snps in the modern panel at 
+  """
+    Infer scale parameter using a naive Li-Stephens Model
+      and ascertaining to snps in the modern panel at
   """
   input:
     hap_panel = rules.create_hap_panel_1kg_ceu_real_chrom.output.hap_panel,
@@ -738,7 +738,7 @@ rule infer_scale_serial_ascertained_ceu_sims:
     pos = cur_data['rec_pos']
     times = cur_data['ta']
     times = times.astype(np.float32)
-    # Testing things out here ... 
+    # Testing things out here ...
     mod_idx = np.where(times == 0)[0]
     ta_test = np.float32(wildcards.ta_samp)
     ta_idx = np.where(times == ta_test)[0][0]
@@ -764,7 +764,7 @@ rule infer_scale_serial_ascertained_ceu_sims:
     np.savez(output.mle_hap_est, scale=mle_scale['x'], params=cur_params, model_params=model_params, mod_freq = afreq_mod)
 
 
-# # Actually loading in some of these schemes 
+# # Actually loading in some of these schemes
 # test_1500_km = np.load('data/hap_copying/time_points/ceu_1500km_ages.npy')/gen_time
 # test_1500_km = np.unique(test_1500_km.astype(int))
 
@@ -774,6 +774,4 @@ rule infer_scale_serial_ascertained_ceu_sims:
 # rule test_ceu_infer_scale_real_chrom:
 #   input:
 # #     expand('data/hap_copying/mle_results_all/{scenario}/ceu_sim_{km}_{CHROM}_deCODE/mle_scale_{mod_n}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'TennessenDoubleGrowthEuropean','TennessenQuadGrowthEuropean'], km=2500, mod_n=49, CHROM='X', Ne=10000, rep=0, asc=10, ta_samp=test_2500_km),
-#     expand('data/hap_copying/mle_results_all/{scenario}/ceu_sim_{km}_{CHROM}_deCODE/mle_scale_{mod_n}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'IBDNeUK10K'], km=1500, mod_n=49, CHROM='X', Ne=10000, rep=0, asc=5, ta_samp=test_1500_km)    
-
-    
+#     expand('data/hap_copying/mle_results_all/{scenario}/ceu_sim_{km}_{CHROM}_deCODE/mle_scale_{mod_n}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'IBDNeUK10K'], km=1500, mod_n=49, CHROM='X', Ne=10000, rep=0, asc=5, ta_samp=test_1500_km)

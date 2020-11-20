@@ -1,11 +1,10 @@
-#!/bin/python3
+"""Methods to compute the correlation in segregating sites between samples."""
+
 
 import numpy as np
 import numpy.ma as ma
-import pandas as pd
 import pyranges
 from pyranges import PyRanges
-from scipy.optimize import curve_fit
 from scipy import interpolate
 
 from scipy.stats import wilcoxon
@@ -13,21 +12,19 @@ from scipy.stats import binom
 
 
 def extract_chrom_gen_pos(df, chrom=2):
-    """ Extract the genetic postition vector for a particular chromosome"""
+    """Extract the genetic postition vector for a particular chromosome."""
     genpos = df[df["CHROM"] == chrom]["GENPOS"].values
     return genpos
 
 
 def extract_phys_pos(df, chrom=2):
-    """ Getting physical distance here """
+    """Get physical distance here."""
     physpos = df[df["CHROM"] == chrom]["POS"].values
     return physpos
 
 
 def gen_binned_estimates(rec_dists, s1, s2, **kwargs):
-    """
-    Get binned estimates of the correlation in segregating sites
-  """
+    """Get binned estimates of the correlation in segregating sites."""
     _, bins = np.histogram(rec_dists, **kwargs)
     bin_idx = np.digitize(rec_dists, bins)
     bin_idx = bin_idx - 1
@@ -61,9 +58,7 @@ def gen_binned_estimates(rec_dists, s1, s2, **kwargs):
 
 
 def sign_test_corrSASB(corr_seg_obj_1, corr_seg_obj_2, test="binom", **kwargs):
-    """
-    Function to compute a non-parametric sign test
-  """
+    """Compute a non-parametric sign test."""
     assert corr_seg_obj_1.monte_carlo_results is not None
     assert corr_seg_obj_2.monte_carlo_results is not None
     monte_carlo_corr_res1 = corr_seg_obj_1.monte_carlo_results
@@ -89,11 +84,10 @@ def sign_test_corrSASB(corr_seg_obj_1, corr_seg_obj_2, test="binom", **kwargs):
 
 
 class CorrSegSites:
-    """
-    Class to implement methods for the correlation in segregating sites
-  """
+    """Class to implement methods for the correlation in segregating sites."""
 
     def __init__(self):
+        """Initialize the correlation in segregating sites."""
         # Add in a physical map distance for defining explicit windows
         self.phys_map = None
         # Three different dictionaries for
@@ -109,29 +103,25 @@ class CorrSegSites:
         # Setting the Monte-Carlo Results here as none
 
     def _conv_cM_to_morgans(self):
-        """
-      Transform from cM to Morgans in case we need to
-    """
+        """Transform from cM to Morgans in case we need to."""
         assert self.chrom_pos_dict is not None
         for c in self.chrom_pos_dict:
             self.chrom_pos_dict[c] = self.chrom_pos_dict[c] / 100
 
     def _setids(self, ids=["X", "Y"]):
-        """
-      Set the ids for the individuals in question
-    """
+        """Set the ids for the individuals in question."""
         self.ids = ids
 
     def calc_windowed_seg_sites(self, chrom=0, L=1e3, filt_rec=True, mask=None):
-        """
-      Calculate windowed estimates of segregating sites
+        """Calculate windowed estimates of segregating sites.
 
-      Input:
-        chrom: identifier for the chromosome
-        L: length of independent locus
-        filt_rec: filter recombination
-        mask: bed file for the underlying mask
-    """
+        Arguments:
+            *chrom: identifier for the chromosome
+            * L: length of independent locus
+            * filt_rec: filter recombination
+            * mask: bed file for the underlying mask
+
+        """
         assert self.chrom_pos_dict is not None
         phys_pos = self.chrom_physpos_dict[chrom]
         rec_pos = self.chrom_pos_dict[chrom]
@@ -182,11 +172,12 @@ class CorrSegSites:
         self.chrom_total_dict[chrom] = tot_data
 
     def autocorr_sA_sB(self, sep=1):
+        """Compute the autocorrelation across windows separated by a distance.
+
+        NOTE : this is meant to be a faster
+            alternative to the monte-carlo sampling approach
+
         """
-      Compute the autocorrelation across windows separated by some amount
-      NOTE : this is meant to be a faster
-        alternative to the monte-carlo sampling approach
-    """
         assert self.chrom_total_dict is not None
         corrs = []
         rec_dists = []
@@ -204,7 +195,6 @@ class CorrSegSites:
             # Setting the mask here
             a = ma.masked_invalid(x1s)
             b = ma.masked_invalid(x2s)
-            msk = ~a.mask & ~b.mask
             corr_est = ma.corrcoef(a, b)[0, 1]
             # Should it be the mean or something else here
             rec_dist_mean = np.nanmean(rec_midpts[sep:] - rec_midpts[:-sep])
@@ -215,9 +205,7 @@ class CorrSegSites:
         return (rec_dists, corrs)
 
     def monte_carlo_corr_SA_SB(self, L=100, nreps=1000, chrom=22, seed=42):
-        """
-      Estimate the correlation in segregating sites using monte-carlo sampling
-    """
+        """Estimate the correlation in segregating sites using monte-carlo sampling."""
         assert self.chrom_physpos_dict is not None
         assert self.chrom_pos_dict is not None
         assert self.chrom_total_dict is not None
@@ -255,14 +243,12 @@ class CorrSegSites:
         self.s2[chrom] = s2s
 
     def gen_binned_rec_rate(self, chroms=None, **kwargs):
+        """Get binned estimates of the correlation in segregating sites.
+
+        Arguments:
+            chroms - numpy array of
+
         """
-      Get binned estimates of the correlation in segregating sites
-        for different recombinational distances
-
-      Arguments:
-        chroms - numpy array of
-
-    """
         assert self.rec_dist is not None
         if chroms is None:
             rec_dists = np.hstack([self.rec_dist[i] for i in self.rec_dist])
@@ -299,18 +285,14 @@ class CorrSegSites:
 
 
 class CorrSegSitesSims(CorrSegSites):
-    """
-    Sub-class for computing the correlation in segregating sites
-  """
+    """Sub-class for computing the correlation in segregating sites."""
 
     def __init__(self):
+        """Initialize the object."""
         super().__init__()
 
     def _load_data(self, hap_panel_file, mod_id=None):
-        """
-      Load in a haplotype panel which is a numpy zipped file
-      consisting of a 2D binary vector
-    """
+        """Load in a haplotype panel which is a 2D binary vector."""
         if self.chrom_pos_dict is None:
             self.chrom_pos_dict = {}
             self.chrom_physpos_dict = {}
@@ -343,11 +325,11 @@ class CorrSegSitesSims(CorrSegSites):
         self.chrom_weight_dict[new_id] = np.ones(np.sum(idx), dtype=np.float32)
 
     def _set_windows_missing(self, fmiss=0.1):
+        """Set a fraction of windows to be randomly missing when computing correlations.
+
+        NOTE: this method is really only good for testing
+
         """
-      Set some fraction of windows to be
-      randomly missing when computing correlations
-      NOTE: this method is really only good for testing
-    """
         assert (fmiss < 1.0) & (fmiss > 0.0)
         assert self.chrom_total_dict is not None
 
@@ -361,14 +343,14 @@ class CorrSegSitesSims(CorrSegSites):
             self.chrom_total_dict[c] = cur_tot_data
 
     def _set_window_masking(self, fmask=0.1, mean_mask=0.5, sigma_mask=0.1):
+        """Set masking weights in scheme to be higher or lower.
+
+        Arguments:
+            fmask - fraction of windows to be masked
+            mean_mask - average mask quality
+            sigma_mask -
+
         """
-      Method to set masking weights in scheme here
-        to be higher or lower
-      Arguments:
-        fmask - fraction of windows to be masked
-        mean_mask - average mask quality
-        sigma_mask -
-    """
         assert (fmask > 0.0) & (fmask <= 1.0)
         assert self.chrom_total_dict is not None
 
@@ -396,9 +378,7 @@ class CorrSegSitesSims(CorrSegSites):
             self.chrom_total_dict[c] = cur_tot_data
 
     def _set_sites_psuedohaploid(self, p_haploid=0.5):
-        """
-      Set some fraction of sites to be psuedo haploid
-    """
+        """Set some fraction of sites to be psuedo haploid."""
         assert (p_haploid >= 0.0) & (p_haploid < 1.0)
         assert self.chrom_weight_dict is not None
         for c in self.chrom_weight_dict:
@@ -411,18 +391,14 @@ class CorrSegSitesSims(CorrSegSites):
 
 
 class CorrSegSitesRealDataHaploid(CorrSegSites):
-
-    """
-    Dataset for real data where we have
-  """
+    """Class for real data that is haploid."""
 
     def __init__(self):
+        """Initialize the object."""
         super().__init__()
 
     def _load_data(self, filepath, miss_to_nan=False):
-        """
-      Loading data from a single entry with a haploid modern and an ancient sample
-    """
+        """Load data from a single entry with a haploid modern and an ancient sample."""
         if self.chrom_pos_dict is None:
             self.chrom_pos_dict = {}
             self.chrom_physpos_dict = {}
@@ -463,18 +439,14 @@ class CorrSegSitesRealDataHaploid(CorrSegSites):
 
 
 class CorrSegSitesRealDataDiploid(CorrSegSites):
-
-    """
-    Dataset for real data where we have to compare two diploids
-  """
+    """Class for real data where we have to compare two diploids."""
 
     def __init__(self):
+        """Initialize the object."""
         super().__init__()
 
     def _load_data(self, filepath, miss_to_nan=False, weighting=False):
-        """
-      Loading data from a single entry with a haploid modern and an ancient sample
-    """
+        """Load data from a single entry with a haploid modern and an ancient sample."""
         if self.chrom_pos_dict is None:
             self.chrom_pos_dict = {}
             self.chrom_physpos_dict = {}
