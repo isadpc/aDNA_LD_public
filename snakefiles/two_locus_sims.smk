@@ -146,4 +146,5 @@ rule combine_branch_length_est:
       tot_df.append(cur_row)
     # Creating the dataframe and outputting to a CSV
     df_final = pd.DataFrame(tot_df, columns=['scenario','ta','rec_rate','corr_bl','cov_bl','exp_bl','Ne','Nreps'])
+    df_final = df_final.dropna()
     df_final.to_csv(str(output), index=False, header=df_final.columns)

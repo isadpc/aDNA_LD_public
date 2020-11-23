@@ -109,6 +109,7 @@ rule monte_carlo_sA_sB_results:
 
     # generate the full output
     final_df = pd.DataFrame(tot_df, columns=['scenario','N','ta','L','rec_rate_mean','rec_rate_se','corr_s1_s2','se_corr'])
+    final_df = final_df.dropna()
     final_df.to_csv(str(output), index=False, header=final_df.columns)
 
 
