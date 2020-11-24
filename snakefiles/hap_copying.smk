@@ -24,7 +24,6 @@ mut_rate = 1e-8
 Ne = 10000
 nreps=20
 
-
 # Data file for IBDNe UK10K demography
 ibd_ne_demo_file = 'data/demo_models/uk10k.IBDNe.txt'
 
@@ -239,13 +238,14 @@ rule infer_scale_serial_all_ascertained:
              mod_freq = afreq_mod)
 
 
+# NOTE : we should keep the same time intervals for sampling here ...
 rule calc_infer_scales_asc_all_figures:
   """Rule to calculate all of the simulations for figures on haplotype copying models as a function of time
   """
   input:
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialConstant'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[20000, 10000,5000], rep=0, asc=5, ta_samp=np.arange(50,501,50)),
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['IBDNeUK10K', 'TennessenEuropean'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[10000], rep=0, asc=5, ta_samp=np.arange(50,501,50)),
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialBottleneckInstant7', 'SerialBottleneckInstant8', 'SerialBottleneckInstant9'], ta=400, interval=10, mod_n=100, n_anc=1, length=40, Ne=1000000, rep=0, asc=5, ta_samp=np.arange(10,401,10)),
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialConstant'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[20000, 10000,5000], rep=np.arange(5), asc=5, ta_samp=np.arange(10,501,10)),
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['IBDNeUK10K', 'TennessenEuropean'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[10000], rep=np.arange(5), asc=5, ta_samp=np.arange(10,501,10)),
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialBottleneckInstant7', 'SerialBottleneckInstant8', 'SerialBottleneckInstant9'], ta=400, interval=10, mod_n=100, n_anc=1, length=40, Ne=1000000, rep=np.arange(5), asc=5, ta_samp=np.arange(10,401,10)),
 #     expand('data/hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SimpleGrowth1', 'SimpleGrowth2', 'SimpleGrowth3', 'SimpleGrowth4'], ta=400, interval=5, mod_n=100, n_anc=1, length=40, Ne=1000000, rep=np.arange(5), asc=5, ta_samp=np.arange(5,401,5))
 
 rule concatenate_hap_copying_results:
