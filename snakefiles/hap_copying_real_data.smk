@@ -6,15 +6,13 @@ import os
 import sys
 import numpy as np
 import msprime as msp
-import tszip 
+import tszip
 import allel
 import pandas as pd
 from tqdm import tqdm
 
 sys.path.append('src/')
 from li_stephens import *
-from sim_copying_changepoints import obtain_topological_changes
-from sim_copying_changepoints import count_changepoints
 from aDNA_coal_sim import *
 
 from scipy.optimize import minimize_scalar
@@ -23,12 +21,12 @@ from scipy.optimize import minimize_scalar
 REICH_LAB_1240K_DATA_DIR = '/scratch/midway2/abiddanda/reich_lab_data/data/'
 RECOMB_RATE_DIR= 'data/maps_b37/'
 
-rec_map_types = {"Physical_Pos" : np.uint64, 
-                 "deCODE" : np.float32, 
-                 "COMBINED_LD" : np.float32, 
-                 "YRI_LD": np.float32, 
-                 "CEU_LD" : np.float32, 
-                 "AA_Map": np.float32, 
+rec_map_types = {"Physical_Pos" : np.uint64,
+                 "deCODE" : np.float32,
+                 "COMBINED_LD" : np.float32,
+                 "YRI_LD": np.float32,
+                 "CEU_LD" : np.float32,
+                 "AA_Map": np.float32,
                  "African_Enriched" : np.float32,
                  "Shared_Map" : np.float32}
 
@@ -36,7 +34,7 @@ rec_map_types = {"Physical_Pos" : np.uint64,
 
 def gen_raw_haps(x_chrom_data, panel_file, test_id='NA20827.SG'):
     """
-        Function to filter x-chromosomal panel and fill in missing data 
+        Function to filter x-chromosomal panel and fill in missing data
         and will eliminate positions with non-segregating variation as well
     """
     tot_x_data = np.load(x_chrom_data, allow_pickle=True)
@@ -44,17 +42,17 @@ def gen_raw_haps(x_chrom_data, panel_file, test_id='NA20827.SG'):
     cm_pos = tot_x_data['cm_pos']
     bp_pos = tot_x_data['bp_pos']
     gt_data = tot_x_data['gt']
-    
+
     panel_indivs = np.loadtxt(panel_file, dtype=str)
     gt_panel = gt_data[:,np.isin(sample_ids, panel_indivs)].T
-    # assert that we have no missing snps in the panel 
+    # assert that we have no missing snps in the panel
     assert(np.all((gt_panel == 0) | (gt_panel == 1)))
     ns = np.sum((gt_panel < 0), axis=0)
-  
+
     indiv_hap = gt_data[:,np.isin(sample_ids, np.array([test_id]))].T
     indiv_hap = indiv_hap[0,:]
-    
-    
+
+
     cm_pos_filt = cm_pos / 1e2
     # All of the entries should be either zero or 1
     assert(np.all(gt_panel >= 0) & np.all(gt_panel < 2))
@@ -62,21 +60,21 @@ def gen_raw_haps(x_chrom_data, panel_file, test_id='NA20827.SG'):
 
 def gen_filt_panels(x_chrom_data, panel_file, test_id='NA20827.SG', fill_hwe=False):
     """
-        Function to filter x-chromosomal panel and fill in missing data 
+        Function to filter x-chromosomal panel and fill in missing data
         and will eliminate positions with non-segregating variation as well
     """
     tot_x_data = np.load(x_chrom_data, allow_pickle=True)
     sample_ids = tot_x_data['samples'].astype(str)
     cm_pos = tot_x_data['cm_pos']
     gt_data = tot_x_data['gt']
-    
-    
+
+
     panel_indivs = np.loadtxt(panel_file, dtype=str)
     gt_panel = gt_data[:,np.isin(sample_ids, panel_indivs)].T
-    # assert that we have the 
+    # assert that we have the
     assert(np.all((gt_panel == 0) | (gt_panel == 1)))
     ns = np.sum((gt_panel < 0), axis=0)
-  
+
     freq_panel = np.sum((gt_panel > 0), axis=0) / np.sum((gt_panel >= 0), axis=0)
     if fill_hwe:
         for i in range(freq_panel.size):
@@ -92,7 +90,7 @@ def gen_filt_panels(x_chrom_data, panel_file, test_id='NA20827.SG', fill_hwe=Fal
     indiv_hap = indiv_hap
     indiv_hap[indiv_hap == 2] = 1
     indiv_hap = indiv_hap[0,:]
-    
+
     # Q : What happens if we don't filter the monomorphics?
     mono_morphic = (freq_panel <= 0.) | (freq_panel >= 1.0)
     missing_test_hap = (indiv_hap < 0)
@@ -108,7 +106,7 @@ def gen_filt_panels(x_chrom_data, panel_file, test_id='NA20827.SG', fill_hwe=Fal
 
 rule filt_male_1240k_x_chrom:
   """
-    Filter to only males on the x-chromosomes for VCF 
+    Filter to only males on the x-chromosomes for VCF
   """
   input:
     vcf_file = REICH_LAB_1240K_DATA_DIR + 'v42.4.1240K.chrX.vcf.gz',
@@ -125,7 +123,7 @@ rule filt_male_1240k_x_chrom:
     tabix -f {output.vcf_male_only}
     """
 
-    
+
 rule interpolate_gen_hap_panel_X_chrom:
   """
      Linearly interpolate recombination position into the full X-chromosome panel
@@ -136,13 +134,13 @@ rule interpolate_gen_hap_panel_X_chrom:
   output:
     panel_file='data/hap_copying/chrX_male_analysis/tot_chrX_panel/tot_chrX.panel.v42.4.1240K.chrX.male_only.recmap_{rec}.total.npz'
   wildcard_constraints:
-    rec = '(CEU_LD|deCODE)' 
+    rec = '(CEU_LD|deCODE)'
   run:
     # Reading in VCF
     vcf_data = allel.read_vcf(input.vcf)
     geno = vcf_data['calldata/GT']
     geno_summed = np.sum(geno, axis=2)
-    # NOTE: summed up but we will try to filter to non-missing SNPs in the initial setting ... 
+    # NOTE: summed up but we will try to filter to non-missing SNPs in the initial setting ...
     geno_summed = geno_summed.astype(np.int8)
     # Generating the list of positions
     pos = vcf_data['variants/POS']
@@ -151,7 +149,7 @@ rule interpolate_gen_hap_panel_X_chrom:
     # Alternative Alleles
     alt_alleles = vcf_data['variants/ALT']
     sample_IDs = vcf_data['samples']
-    # Reading in the recombination map 
+    # Reading in the recombination map
     rec_df = pd.read_csv(input.genmap, sep='\s+', low_memory=True, dtype=rec_map_types)
     rec_pos = rec_df['Physical_Pos'].values
     rec_dist = rec_df[str(wildcards.rec)].values
@@ -180,7 +178,7 @@ rule estimate_jump_rate_sample:
   output:
     mle_hap_copying_res='data/hap_copying/chrX_male_analysis/mle_est/chrX_filt.panel_{panel}.sample_{sample}.recmap_{rec}.listephens_hmm.npz'
   wildcard_constraints:
-    rec = '(CEU_LD|deCODE)' 
+    rec = '(CEU_LD|deCODE)'
   run:
     panel, pos, test_hap = gen_filt_panels(x_chrom_data=input.hap_panel, panel_file=input.panel_indivs_file, test_id=str(wildcards.sample), fill_hwe=True)
     ls_model = LiStephensHMM(haps=panel, positions=pos)
@@ -189,7 +187,7 @@ rule estimate_jump_rate_sample:
     log_ll_est = np.zeros(50, dtype=np.float32)
     for j in tqdm(range(50)):
       log_ll_est[j] = -ls_model._negative_logll(test_hap, scale=jump_rates[j])
-    scale_inf_res = ls_model._infer_scale(test_hap, method='Bounded', bounds=(1.,1e6), tol=1e-5)  
+    scale_inf_res = ls_model._infer_scale(test_hap, method='Bounded', bounds=(1.,1e6), tol=1e-5)
     # Setting the error rate to be similar to the original LS-Model
     mle_params = ls_model._infer_params(test_hap, x0=[1e2, 1e-3], bounds=[(1e1,1e7),(1e-6,0.1)], tol=1e-5)
     cur_params = np.array([np.nan,np.nan])
@@ -198,8 +196,8 @@ rule estimate_jump_rate_sample:
     # getting some model stats
     model_stats = np.array([ls_model.n_snps, ls_model.n_samples])
     np.savez_compressed(output.mle_hap_copying_res, hap_panel=ls_model.haps, query_hap=test_hap, positions=ls_model.positions, jump_rates=jump_rates, logll=log_ll_est, mle_params=cur_params, scale_inf=scale_inf_res['x'], model_stats=model_stats, sampleID=np.array([str(wildcards.sample)]))
-  
-  
+
+
 
 # --------- Using the Real 1000 Genomes as a panel ----------- #
 # REICH_LAB_1240K_DATA_DIR = '/scratch/midway2/abiddanda/reich_lab_data/data/'
@@ -240,12 +238,12 @@ rule merge_real_1kg_vcf_chrX_1240K_panel:
       bcftools merge {input.vcf_1240k_only} {input.vcf_real_1kg} -R {output.tmp_chrX_pos} | bgzip -@4 > {output.vcf}
       tabix -f {output.vcf}
     """
-    
+
 
 rule interp_gen_hap_panel_chrX_real1kg:
   """
      Linearly interpolate recombination position into the full X-chromosome panel
-     from the 1000 Genomes Project Phase 3 data 
+     from the 1000 Genomes Project Phase 3 data
   """
   input:
     vcf = rules.merge_real_1kg_vcf_chrX_1240K_panel.output.vcf,
@@ -259,7 +257,7 @@ rule interp_gen_hap_panel_chrX_real1kg:
     # Reading in VCF
     vcf_data = allel.read_vcf(input.vcf)
     geno = vcf_data['calldata/GT']
-    # Taking the first haplotype here since it should be equivalent ... 
+    # Taking the first haplotype here since it should be equivalent ...
     geno_summed = geno[:,:,0]
     geno_summed = geno_summed.astype(np.int8)
     geno_summed[geno_summed == 2] = 1
@@ -270,7 +268,7 @@ rule interp_gen_hap_panel_chrX_real1kg:
     # Alternative Alleles
     alt_alleles = vcf_data['variants/ALT']
     sample_IDs = vcf_data['samples']
-    # Reading in the recombination map 
+    # Reading in the recombination map
     rec_df = pd.read_csv(input.genmap, sep='\s+', low_memory=True, dtype=rec_map_types)
     rec_pos = rec_df['Physical_Pos'].values
     rec_dist = rec_df[str(wildcards.rec)].values
@@ -286,7 +284,7 @@ rule interp_gen_hap_panel_chrX_real1kg:
     interp_rec_pos = np.interp(real_pos_filt, rec_pos[idx], rec_dist[idx])
     # Saving the file
     np.savez_compressed(output.panel_file, gt=gt_filt, samples=sample_IDs, ref=ref_alleles, alt=alt_alleles, bp_pos = real_pos_filt, cm_pos = interp_rec_pos)
-    
+
 
 rule estimate_jump_rate_sample_real_1kg:
   """
@@ -299,7 +297,7 @@ rule estimate_jump_rate_sample_real_1kg:
   output:
     mle_hap_copying_res='data/hap_copying/chrX_male_analysis/mle_est_real_1kg/chrX_filt.panel_{panel}.sample_{sample}.recmap_{rec}.listephens_hmm.npz'
   wildcard_constraints:
-    rec = '(CEU_LD|deCODE)' 
+    rec = '(CEU_LD|deCODE)'
   run:
     # NOTE : we should keep the raw panel and raw query haplotype as well here ...
     raw_panel, raw_cmpos, raw_bppos, raw_testhap = gen_raw_haps(x_chrom_data=input.hap_panel_chrX_1kg, panel_file=input.panel_indivs_file, test_id=str(wildcards.sample))
@@ -311,7 +309,7 @@ rule estimate_jump_rate_sample_real_1kg:
     log_ll_est = np.zeros(n, dtype=np.float32)
     for j in tqdm(range(n)):
       log_ll_est[j] = -ls_model._negative_logll(test_hap, scale=jump_rates[j])
-    scale_inf_res = ls_model._infer_scale(test_hap, method='Bounded', bounds=(1.,1e6))  
+    scale_inf_res = ls_model._infer_scale(test_hap, method='Bounded', bounds=(1.,1e6))
     # Setting the error rate to be similar to the original LS-Model
     mle_params = ls_model._infer_params(test_hap, x0=[1e2, 1e-3], bounds=[(1e1,1e7),(1e-6,0.9)], tol=1e-7)
     cur_params = np.array([np.nan,np.nan])
@@ -324,7 +322,7 @@ rule estimate_jump_rate_sample_real_1kg:
 
 rule gen_all_hap_copying_real1kg_panel:
   input:
-     expand('data/hap_copying/chrX_male_analysis/mle_est_real_1kg/chrX_filt.panel_{panel}.sample_{sample}.recmap_{rec}.listephens_hmm.npz', rec='deCODE', panel=['ceu', 'eur'], sample=ancient_samples['indivID'].values) 
+     expand('data/hap_copying/chrX_male_analysis/mle_est_real_1kg/chrX_filt.panel_{panel}.sample_{sample}.recmap_{rec}.listephens_hmm.npz', rec='deCODE', panel=['ceu', 'eur'], sample=ancient_samples['indivID'].values)
 
 
-# TODO : final rule to full generate this dataset ... 
+# TODO : final rule to full generate this dataset ...

@@ -225,16 +225,16 @@ rule infer_scale_serial_all_ascertained:
       cur_params = mle_params['x']
       se_params = np.array([np.sqrt(mle_params.hess_inv.todense()[0,0]), np.sqrt(mle_params.hess_inv.todense()[1,1])])
     model_params = np.array([mod_asc_panel.shape[0], asc_pos.size, ta_test])
-    # NOTE: we might need some different params being inferred ... 
+    # NOTE: we might need some different params being inferred ...
     np.savez(output.mle_hap_est,
              scenario=wildcards.scenario,
              Ne=np.int32(wildcards.Ne),
-             scales=scales, 
-             loglls=-neg_log_lls, 
-             scale=mle_scale['x'], 
-             params=cur_params, 
-             se_params=se_params, 
-             model_params=model_params, 
+             scales=scales,
+             loglls=-neg_log_lls,
+             scale=mle_scale['x'],
+             params=cur_params,
+             se_params=se_params,
+             model_params=model_params,
              mod_freq = afreq_mod)
 
 
@@ -269,29 +269,29 @@ rule concatenate_hap_copying_results:
     final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal','scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta'])
     # Concatenate to create a new dataframe
     final_df.to_csv(str(output), index=False, header=final_df.columns)
-      
 
 
 
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # # ---------- Running a serial simulation according to the real Reich Lab Data  -----------#
 
 # gen_time = 30
