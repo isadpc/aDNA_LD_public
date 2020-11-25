@@ -352,8 +352,8 @@ rule create_hap_panel_1kg_ceu_real_chrom:
     times = np.array([tree.time(x) for x in node_ids])
     np.savez_compressed(output.hap_panel, haps=geno, rec_pos=rec_pos, phys_pos=phys_pos, ta=times)
 
-    
-# NOTE : something is slightly off here ... 
+
+# NOTE : something is slightly off here ...
 rule infer_scale_serial_ascertained_ceu_sims:
   """
     Infer scale parameter using a naive Li-Stephens Model
@@ -410,7 +410,7 @@ rule infer_scale_serial_ascertained_ceu_sims:
              model_params=model_params,
              mod_freq = afreq_mod)
 
-# setup the times to sample    
+# setup the times to sample
 times_kya_df = pd.read_csv('data/hap_copying/chrX_male_analysis/mle_est_real_1kg/ceu_kya_ages.csv')
 times_gen = np.array(times_kya_df.age_kya.values / gen_time, dtype=np.int32)
 times_gen = np.unique(times_gen)
@@ -418,8 +418,8 @@ times_gen = np.unique(times_gen)
 rule ceu_infer_scale_real_chrom:
   input:
     expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_deCODE/mle_scale_{mod_n}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'IBDNeUK10K'], mod_n=49, Ne=10000, rep=0, asc=10, ta_samp=times_gen)
-    
-    
+
+
 rule concatenate_hap_copying_results_chrX_sim:
   input:
     files = rules.ceu_infer_scale_real_chrom.input

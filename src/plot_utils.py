@@ -19,9 +19,9 @@ def debox(ax):
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
 
-    
+
 def colorbar(mappable, **kwargs):
-    """Creating a colorbar with more gusto."""
+    """Create a colorbar with more gusto."""
     last_axes = plt.gca()
     ax = mappable.axes
     fig = ax.figure
@@ -30,6 +30,7 @@ def colorbar(mappable, **kwargs):
     cbar = fig.colorbar(mappable, cax=cax, **kwargs)
     plt.sca(last_axes)
     return cbar
+
 
 def label_multipanel(axs, labels, xoff=-0.05, yoff=1.14, **kwargs):
     """Labeling multiple axes with text labels."""
