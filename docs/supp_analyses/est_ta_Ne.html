@@ -3,7 +3,7 @@
 <head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>index</title><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>est_ta_Ne</title><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 
 <style type="text/css">
   pre { line-height: 125%; margin: 0; }
@@ -13096,27 +13096,241 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Table-of-Contents-for-analyses-in-&quot;Properties-of-Two-Locus-Genealogies-and-Linkage-Disequilibrium-in-Temporally-Structured-Samples&quot;">Table of Contents for analyses in "Properties of Two-Locus Genealogies and Linkage Disequilibrium in Temporally Structured Samples"<a class="anchor-link" href="#Table-of-Contents-for-analyses-in-&quot;Properties-of-Two-Locus-Genealogies-and-Linkage-Disequilibrium-in-Temporally-Structured-Samples&quot;">&#182;</a></h1><h2 id="by-Biddanda,-Steinruecken,-and-Novembre">by Biddanda, Steinruecken, and Novembre<a class="anchor-link" href="#by-Biddanda,-Steinruecken,-and-Novembre">&#182;</a></h2><ol>
-<li><p>Main Analyses</p>
-<ul>
-<li><a href="./main_analyses/two_locus_adna.html">Probability of uncoupling &amp; correlation of pairwise differences</a></li>
-<li><a href="./main_analyses/two_locus_demographic.html">Correlation in pairwise differences with time-stratified sampling</a></li>
-<li><a href="./main_analyses/sigma2d_time_strat.html">Calculation of $\sigma^2_d$ with time-stratified sampling</a></li>
-<li><a href="./main_analyses/demography_copying_rate.html">Haplotype copying jump-rates under varying demographies</a></li>
-<li><a href="./main_analyses/reich_1240k_analysis.html">Haplotype copying jump-rates estimated in real ancient DNA data</a></li>
-</ul>
-</li>
-<li><p>Supplementary Analyses</p>
-<ul>
-<li><a href="./supp_analyses/time_to_first_coal_anc_sample.html">Time to first coalescence for an ancient sample</a></li>
-<li><a href="./supp_analyses/ls_verify.html">Verifying Li-Stephens Jump Rate Inference</a></li>
-<li><a href="./supp_analyses/est_ta_Ne.html">Estimating $t_a$ and $N_e$ from $Corr(\pi_A,\pi_B$</a></li>
-</ul>
-</li>
-</ol>
+<h2 id="An-attempt-to-estimate-Ne-and-sampling-time-from-the-correlation-in-segregting-sites">An attempt to estimate Ne and sampling time from the correlation in segregting sites<a class="anchor-link" href="#An-attempt-to-estimate-Ne-and-sampling-time-from-the-correlation-in-segregting-sites">&#182;</a></h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Testing the performance of Monte-Carlo Estimators </span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;../../src/&#39;</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">plot_utils</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="o">%</span><span class="k">matplotlib</span> inline
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;font.sans-serif&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Arial&quot;</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.facecolor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;w&quot;</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.autolayout&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1</span> <span class="kn">import</span> <span class="n">make_axes_locatable</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="c1"># Making the relevant figure directories that we want</span>
+<span class="n">main_figdir</span> <span class="o">=</span> <span class="s1">&#39;../../plots/two_locus_stats/corrSASB_sims/&#39;</span>
+<span class="n">supp_figdir</span> <span class="o">=</span> <span class="s1">&#39;../../plots/supp_figs/two_locus_stats/corrSASB_sims/&#39;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">main_figdir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">supp_figdir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">fname</span> <span class="o">=</span> <span class="s1">&#39;../../results/corr_seg_sites/est_ta_Ne_corr_sa_sb.csv&#39;</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[3]:</div>
+
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>scenario</th>
+      <th>ta</th>
+      <th>ta_est</th>
+      <th>se_ta_est</th>
+      <th>Ne_est</th>
+      <th>se_Ne_est</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>SerialConstant</td>
+      <td>0</td>
+      <td>3.031356e+02</td>
+      <td>1.979427e+01</td>
+      <td>8090.367136</td>
+      <td>19.383743</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>TennessenEuropean</td>
+      <td>0</td>
+      <td>4.479192e-21</td>
+      <td>4.329505e-21</td>
+      <td>7124.033212</td>
+      <td>11.558165</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>SerialConstant</td>
+      <td>100</td>
+      <td>3.760312e+02</td>
+      <td>1.470392e+01</td>
+      <td>8342.151167</td>
+      <td>21.402484</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>TennessenEuropean</td>
+      <td>100</td>
+      <td>1.916471e-20</td>
+      <td>4.049841e-21</td>
+      <td>6860.790907</td>
+      <td>7.295584</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>SerialConstant</td>
+      <td>1000</td>
+      <td>2.470833e+03</td>
+      <td>2.245912e+01</td>
+      <td>8035.558406</td>
+      <td>22.776082</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
 
 </div>
 </div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[4]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">4</span><span class="p">),</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="s1">&#39;row&#39;</span><span class="p">)</span>
+
+<span class="n">constant_df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;scenario&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;SerialConstant&#39;</span><span class="p">]</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">constant_df</span><span class="o">.</span><span class="n">ta</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">constant_df</span><span class="o">.</span><span class="n">ta_est</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                 <span class="n">yerr</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">constant_df</span><span class="o">.</span><span class="n">se_ta_est</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">constant_df</span><span class="o">.</span><span class="n">ta</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">constant_df</span><span class="o">.</span><span class="n">ta</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;+&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># Plot estimates of Ne</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">constant_df</span><span class="o">.</span><span class="n">ta</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">constant_df</span><span class="o">.</span><span class="n">Ne_est</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                 <span class="n">yerr</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">constant_df</span><span class="o">.</span><span class="n">se_Ne_est</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">)</span>
+
+<span class="n">growth_df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;scenario&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;TennessenEuropean&#39;</span><span class="p">]</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">growth_df</span><span class="o">.</span><span class="n">ta</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">growth_df</span><span class="o">.</span><span class="n">ta_est</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                 <span class="n">yerr</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">growth_df</span><span class="o">.</span><span class="n">se_ta_est</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">growth_df</span><span class="o">.</span><span class="n">ta</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">growth_df</span><span class="o">.</span><span class="n">ta</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;+&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># Plot estimates of Ne</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">growth_df</span><span class="o">.</span><span class="n">ta</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">growth_df</span><span class="o">.</span><span class="n">Ne_est</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                 <span class="n">yerr</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">growth_df</span><span class="o">.</span><span class="n">se_Ne_est</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">1e4</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;orange&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">6958.</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;orange&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mf">1e5</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;Constant $N_e$&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;European Growth&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$\hat</span><span class="si">{t}</span><span class="s1">_a$&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$\hat</span><span class="si">{N}</span><span class="s1">_e$&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s1">&#39;symlog&#39;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">((</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">)):</span>
+    <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="o">-</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">1.18</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span>
+               <span class="n">fontweight</span><span class="o">=</span><span class="s1">&#39;bold&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">transAxes</span><span class="p">);</span>
+
+<span class="n">debox</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]);</span> <span class="n">debox</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]);</span>
+<span class="n">debox</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]);</span> <span class="n">debox</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]);</span>
+
+<span class="n">fig</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.6</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.01</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$t_a$&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">supp_figdir</span> <span class="o">+</span> <span class="s1">&#39;lstsq_constant_growth.pdf&#39;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+
+
+<div class="output_png output_subarea ">
+<img src="data:image/png;base64,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
+"
+>
+</div>
+
+</div>
+
+</div>
+</div>
+
 </div>
     </div>
   </div>
