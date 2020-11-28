@@ -28,6 +28,7 @@ def ascertain_variants(hap_panel, pos, maf=0.05):
     asc_pos = pos[idx]
     return(asc_panel, asc_pos, idx)
 
+
 # ------- 1. Generate a modern haplotype panel from ChrX using the deCODE map ------- #
 # - TODO : should we implement ascertainment as well.
 rule gen_hap_panel_real_map:
