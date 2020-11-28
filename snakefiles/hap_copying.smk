@@ -214,11 +214,12 @@ rule infer_scale_serial_all_ascertained:
     afreq_mod = np.sum(mod_asc_panel, axis=1)
 
     cur_hmm = LiStephensHMM(haps = mod_asc_panel, positions=asc_pos)
+    cur_hmm.theta = cur_hmm._infer_theta()
     scales = np.logspace(2,4,20)
-    neg_log_lls = np.array([cur_hmm.negative_logll(anc_asc_hap, scale=s, eps=1e-2) for s in tqdm(scales)])
-    mle_scale = cur_hmm.infer_scale(anc_asc_hap, eps=1e-2, method='Bounded', bounds=(1.,1e6), tol=1e-4)
+    neg_log_lls = np.array([cur_hmm._negative_logll(anc_asc_hap, scale=s, eps=1e-2) for s in tqdm(scales)])
+    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Bounded', bounds=(1.,1e6), tol=1e-7)
     # Estimating both error and scale parameters jointly
-    mle_params = cur_hmm.infer_params(anc_asc_hap, x0=[1e2,1e-4], bounds=[(1e1,1e7), (1e-6,1e-1)], tol=1e-4)
+    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[1e2,1e-4], bounds=[(1e1,1e7), (1e-6,0.5)], tol=1e-7)
     cur_params = np.array([np.nan, np.nan])
     se_params = np.array([np.nan, np.nan])
     if mle_params['success']:
@@ -269,17 +270,6 @@ rule concatenate_hap_copying_results:
     final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal','scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta'])
     # Concatenate to create a new dataframe
     final_df.to_csv(str(output), index=False, header=final_df.columns)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -352,8 +342,8 @@ rule create_hap_panel_1kg_ceu_real_chrom:
     times = np.array([tree.time(x) for x in node_ids])
     np.savez_compressed(output.hap_panel, haps=geno, rec_pos=rec_pos, phys_pos=phys_pos, ta=times)
 
-    
-# NOTE : something is slightly off here ... 
+
+# NOTE : something is slightly off here ...
 rule infer_scale_serial_ascertained_ceu_sims:
   """
     Infer scale parameter using a naive Li-Stephens Model
@@ -368,7 +358,7 @@ rule infer_scale_serial_ascertained_ceu_sims:
   output:
     mle_hap_est = config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_{genmap}/mle_scale_{mod_n, \d+}_Ne{Ne,\d+}_{rep, \d+}.asc_{asc, \d+}.ta_{ta_samp, \d+}.scale.npz'
   run:
-        # loading in the data
+    # loading in the data
     cur_data = np.load(input.hap_panel)
     hap_panel_test = cur_data['haps']
     pos = cur_data['rec_pos']
@@ -387,11 +377,12 @@ rule infer_scale_serial_ascertained_ceu_sims:
 
     afreq_mod = np.sum(mod_asc_panel, axis=1)
     cur_hmm = LiStephensHMM(haps = mod_asc_panel, positions=asc_pos)
+    cur_hmm.theta = cur_hmm._infer_theta()
     scales = np.logspace(2,4,20)
-    neg_log_lls = np.array([cur_hmm.negative_logll(anc_asc_hap, scale=s, eps=1e-2) for s in tqdm(scales)])
-    mle_scale = cur_hmm.infer_scale(anc_asc_hap, eps=1e-2, method='Bounded', bounds=(1.,1e6), tol=1e-4)
+    neg_log_lls = np.array([cur_hmm._negative_logll(anc_asc_hap, scale=s, eps=1e-2) for s in tqdm(scales)])
+    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Bounded', bounds=(1.,1e6), tol=1e-7)
     # Estimating both error and scale parameters jointly
-    mle_params = cur_hmm.infer_params(anc_asc_hap, x0=[1e2, 1e-4], bounds=[(1e1,1e7), (1e-6,1e-1)], tol=1e-4)
+    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[1e2, 1e-4], bounds=[(1e1,1e7), (1e-6,1e-1)], tol=1e-7)
     cur_params = np.array([np.nan, np.nan])
     se_params = np.array([np.nan, np.nan])
     if mle_params['success']:
@@ -410,7 +401,7 @@ rule infer_scale_serial_ascertained_ceu_sims:
              model_params=model_params,
              mod_freq = afreq_mod)
 
-# setup the times to sample    
+# setup the times to sample
 times_kya_df = pd.read_csv('data/hap_copying/chrX_male_analysis/mle_est_real_1kg/ceu_kya_ages.csv')
 times_gen = np.array(times_kya_df.age_kya.values / gen_time, dtype=np.int32)
 times_gen = np.unique(times_gen)
@@ -418,8 +409,8 @@ times_gen = np.unique(times_gen)
 rule ceu_infer_scale_real_chrom:
   input:
     expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_deCODE/mle_scale_{mod_n}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'IBDNeUK10K'], mod_n=49, Ne=10000, rep=0, asc=10, ta_samp=times_gen)
-    
-    
+
+
 rule concatenate_hap_copying_results_chrX_sim:
   input:
     files = rules.ceu_infer_scale_real_chrom.input

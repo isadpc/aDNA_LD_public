@@ -115,72 +115,71 @@ rule monte_carlo_sA_sB_results:
 
 
 
-# ### --------- 2. Estimation Routines for Parameters ----------- ###
+### --------- 2. Estimation Routines for Parameters ----------- ###
 
-# def stack_ragged(array_list, axis=0):
-#     lengths = [np.shape(a)[axis] for a in array_list]
-#     idx = np.cumsum(lengths[:-1])
-#     stacked = np.concatenate(array_list, axis=axis)
-#     return(stacked, idx)
+def stack_ragged(array_list, axis=0):
+    lengths = [np.shape(a)[axis] for a in array_list]
+    idx = np.cumsum(lengths[:-1])
+    stacked = np.concatenate(array_list, axis=axis)
+    return(stacked, idx)
+
+rule est_Ne_ta_1kb_sim_bootstrap_monte_carlo_loco:
+  """
+    Estimating the effective population size
+      and the age of the sample from correlation in segregating sites
+  """
+  input:
+    expand('data/hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{rep}.npz', rep=np.arange(20))
+  output:
+    bootstrap_params='data/corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{seed,\d+}.monte_carlo_L{L}.N{N,\d+}.loco.npz'
+  wildcard_constraints:
+    scenario='(SerialConstant|TennessenEuropean)',
+    mod_n = '1',
+    n_anc = '1',
+    L = 1000,
+    length=20
+  run:
+    # 1. Generating the correlation object here
+    corr_sim = CorrSegSitesSims()
+    for f in tqdm(input):
+      corr_sim._load_data(f)
+    for i in tqdm(range(20)):
+      corr_sim.calc_windowed_seg_sites(chrom=i, L=int(wildcards.L))
+    for i in tqdm(range(20)):
+      corr_sim.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=5000, chrom=i, seed=int(wildcards.seed))
+
+    # TODO : should we store the intermediates here
+    # Leaving one chromosome out, out of 20
+    popt_reps = np.zeros(shape=(20,2))
+    rec_rate_mean_storage = []
+    corr_s1_s2_storage = []
+
+    # Actually running leave-one-chromosome out for testing
+    chroms = np.arange(20)
+    for i in tqdm(range(20)):
+      chroms_subsampled = np.delete(chroms, i, 0)
+
+      rec_rates_mean, _, corr_s1_s2, _ = corr_sim.gen_binned_rec_rate(chroms=chroms_subsampled, bins='auto', range=(1e-5,5e-3))
+      #Filter out the nan estimates here
+      # TODO : should we put in the weight here
+      non_nan_recs = ~np.isnan(rec_rates_mean)
+      non_nan_corr = ~np.isnan(corr_s1_s2)
+      rec_rates_mean = rec_rates_mean[non_nan_recs]
+      corr_s1_s2 = corr_s1_s2[non_nan_corr]
+      curpopt,_ = fit_constant_1kb(rec_rates_mean, corr_s1_s2, bounds=(0,[1e8,1e6]))
+      popt_reps[i,:] = curpopt
+      rec_rate_mean_storage.append(rec_rates_mean)
+      corr_s1_s2_storage.append(corr_s1_s2)
+    # stacking the arrays
+    stacked_rec_rates_mean, idx_rec_rates = stack_ragged(rec_rate_mean_storage)
+    stacked_corr_s1_s2_mean, idx_corr_s1_s2 = stack_ragged(corr_s1_s2_storage)
+
+    np.savez_compressed(output.bootstrap_params, est_params=popt_reps, rec_rates_mean=stacked_rec_rates_mean, idx_rec_rates=idx_rec_rates, corr_s1_s2=stacked_corr_s1_s2_mean, idx_corr_s1_s2=idx_corr_s1_s2)
 
 
-# rule est_Ne_ta_1kb_sim_bootstrap_monte_carlo_loco:
-#   """
-#     Estimating the effective population size
-#       and the age of the sample from correlation in segregating sites
-#   """
-#   input:
-#     expand('data/hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{rep}.npz', rep=np.arange(20))
-#   output:
-#     bootstrap_params='data/corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{seed,\d+}.monte_carlo_L{L}.N{N,\d+}.loco.npz'
-#   wildcard_constraints:
-#     scenario='(SerialConstant|TennessenEuropean)',
-#     mod_n = '1',
-#     n_anc = '1',
-#     L = 1000,
-#     length=20
-#   run:
-#     # 1. Generating the correlation object here
-#     corr_sim = CorrSegSitesSims()
-#     for f in tqdm(input):
-#       corr_sim._load_data(f)
-#     for i in tqdm(range(20)):
-#       corr_sim.calc_windowed_seg_sites(chrom=i, L=int(wildcards.L))
-#     for i in tqdm(range(20)):
-#       corr_sim.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=5000, chrom=i, seed=int(wildcards.seed))
-
-#     # TODO : should we store the intermediates here
-#     # Leaving one chromosome out, out of 20
-#     popt_reps = np.zeros(shape=(20,2))
-#     rec_rate_mean_storage = []
-#     corr_s1_s2_storage = []
-
-#     # Actually running leave-one-chromosome out for testing
-#     chroms = np.arange(20)
-#     for i in tqdm(range(20)):
-#       chroms_subsampled = np.delete(chroms, i, 0)
-
-#       rec_rates_mean, _, corr_s1_s2, _ = corr_sim.gen_binned_rec_rate(chroms=chroms_subsampled, bins='auto', range=(1e-5,5e-3))
-#       #Filter out the nan estimates here
-#       # TODO : should we put in the weight here
-#       non_nan_recs = ~np.isnan(rec_rates_mean)
-#       non_nan_corr = ~np.isnan(corr_s1_s2)
-#       rec_rates_mean = rec_rates_mean[non_nan_recs]
-#       corr_s1_s2 = corr_s1_s2[non_nan_corr]
-#       curpopt,_ = fit_constant_1kb(rec_rates_mean, corr_s1_s2, bounds=(0,[1e8,1e6]))
-#       popt_reps[i,:] = curpopt
-#       rec_rate_mean_storage.append(rec_rates_mean)
-#       corr_s1_s2_storage.append(corr_s1_s2)
-#     # stacking the arrays
-#     stacked_rec_rates_mean, idx_rec_rates = stack_ragged(rec_rate_mean_storage)
-#     stacked_corr_s1_s2_mean, idx_corr_s1_s2 = stack_ragged(corr_s1_s2_storage)
-
-#     np.savez_compressed(output.bootstrap_params, est_params=popt_reps, rec_rates_mean=stacked_rec_rates_mean, idx_rec_rates=idx_rec_rates, corr_s1_s2=stacked_corr_s1_s2_mean, idx_corr_s1_s2=idx_corr_s1_s2)
-
-
-# rule est_Ne_ta_1kb_sim_final:
-#   input:
-#     expand('data/corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{seed}.monte_carlo_L{L}.N{N}.loco.npz', seed=42, Ne=10000, length=20, ta=[0,100,1000,10000], mod_n=1, n_anc=1, scenario=['SerialConstant', 'TennessenEuropean'], L=1000, N=200)
+rule est_Ne_ta_1kb_sim_final:
+  input:
+    expand('data/corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{seed}.monte_carlo_L{L}.N{N}.loco.npz', seed=42, Ne=10000, length=20, ta=[0,100,1000,10000], mod_n=1, n_anc=1, scenario=['SerialConstant', 'TennessenEuropean'], L=1000, N=200)
 
 
 
