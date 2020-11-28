@@ -9,10 +9,13 @@ import allel
 
 sys.path.append('src/')
 from seg_sites_covar import *
-# from fit_corr_segsites import *
+from fit_corr_segsites import *
 
 # Import configurations
 configfile: "config.yml"
+
+# Some simulations rely on the sims for haplotype copying
+include: "hap_copying.smk"
 
 # --- 1. Estimation from Simulations --- #
 rule estimate_autocorr_sA_Sb_sims:
@@ -115,7 +118,7 @@ rule monte_carlo_sA_sB_results:
 
 
 
-### --------- 2. Estimation Routines for Parameters ----------- ###
+### --------- 2. Attempt to estimate parameters ----------- ###
 
 def stack_ragged(array_list, axis=0):
     lengths = [np.shape(a)[axis] for a in array_list]
@@ -129,9 +132,9 @@ rule est_Ne_ta_1kb_sim_bootstrap_monte_carlo_loco:
       and the age of the sample from correlation in segregating sites
   """
   input:
-    expand('data/hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{rep}.npz', rep=np.arange(20))
+    expand(config['tmpdir'] + 'hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{rep}.npz', rep=np.arange(20))
   output:
-    bootstrap_params='data/corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{seed,\d+}.monte_carlo_L{L}.N{N,\d+}.loco.npz'
+    bootstrap_params=config['tmpdir'] + 'corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{seed,\d+}.monte_carlo_L{L}.N{N,\d+}.loco.npz'
   wildcard_constraints:
     scenario='(SerialConstant|TennessenEuropean)',
     mod_n = '1',
@@ -174,44 +177,37 @@ rule est_Ne_ta_1kb_sim_bootstrap_monte_carlo_loco:
     stacked_rec_rates_mean, idx_rec_rates = stack_ragged(rec_rate_mean_storage)
     stacked_corr_s1_s2_mean, idx_corr_s1_s2 = stack_ragged(corr_s1_s2_storage)
 
-    np.savez_compressed(output.bootstrap_params, est_params=popt_reps, rec_rates_mean=stacked_rec_rates_mean, idx_rec_rates=idx_rec_rates, corr_s1_s2=stacked_corr_s1_s2_mean, idx_corr_s1_s2=idx_corr_s1_s2)
+    np.savez_compressed(output.bootstrap_params, scenario=wildcards.scenario, ta = np.int32(wildcards.ta), est_params=popt_reps, rec_rates_mean=stacked_rec_rates_mean, idx_rec_rates=idx_rec_rates, corr_s1_s2=stacked_corr_s1_s2_mean, idx_corr_s1_s2=idx_corr_s1_s2)
 
 
 rule est_Ne_ta_1kb_sim_final:
   input:
-    expand('data/corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{seed}.monte_carlo_L{L}.N{N}.loco.npz', seed=42, Ne=10000, length=20, ta=[0,100,1000,10000], mod_n=1, n_anc=1, scenario=['SerialConstant', 'TennessenEuropean'], L=1000, N=200)
+    expand(config['tmpdir'] + 'corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{seed}.monte_carlo_L{L}.N{N}.loco.npz', seed=42, Ne=10000, length=20, ta=[0,100,1000,10000], mod_n=1, n_anc=1, scenario=['SerialConstant', 'TennessenEuropean'], L=1000, N=200)
 
+rule collapse_est_ta_Ne:
+  input:
+    files = rules.est_Ne_ta_1kb_sim_final.input
+  output:
+    'results/corr_seg_sites/est_ta_Ne_corr_sa_sb.csv'
+  run:
+    tot_df_rows = []
+    for f in tqdm(input.files):
+      cur_df = np.load(f)
+      scenario = cur_df['scenario']
+      ta = cur_df['ta']
+      est_params = cur_df['est_params']
+      Ne_est = est_params[:,0]
+      ta_est = est_params[:,1]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      mean_Ne = np.mean(Ne_est)
+      se_Ne = np.std(Ne_est, ddof=1)/ np.sqrt(Ne_est.size)
+      mean_ta = np.mean(ta_est)
+      se_ta = np.std(ta_est, ddof=1) / np.sqrt(ta_est.size)
+      cur_row = [scenario, ta, mean_ta, se_ta, mean_Ne, se_Ne]
+      tot_df_rows.append(cur_row)
+    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','ta','ta_est','se_ta_est', 'Ne_est', 'se_Ne_est'])
+    final_df = final_df.dropna()
+    final_df.to_csv(str(output), index=False, header=final_df.columns)
 
 
 # # -------------- 3. Estimation from Real Data --------------- #

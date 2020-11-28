@@ -21,7 +21,7 @@ def debox(ax):
 
 
 def colorbar(mappable, **kwargs):
-    """Creating a colorbar with more gusto."""
+    """Create a colorbar with more gusto."""
     last_axes = plt.gca()
     ax = mappable.axes
     fig = ax.figure

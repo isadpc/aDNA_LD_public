@@ -9,6 +9,10 @@ import allel
 import pandas as pd
 from tqdm import tqdm
 
+# Using the splines to estimate the
+from scipy.interpolate import UnivariateSpline
+
+
 sys.path.append('src/')
 from li_stephens import LiStephensHMM
 from aDNA_coal_sim import *
@@ -35,7 +39,6 @@ def ascertain_variants(hap_panel, pos, maf=0.05):
     asc_panel = hap_panel[:,idx]
     asc_pos = pos[idx]
     return(asc_panel, asc_pos, idx)
-
 
 
 ###### --------- Simulations ----------- ######
@@ -265,13 +268,17 @@ rule concatenate_hap_copying_results:
       params = cur_df['params']
       se_params = cur_df['se_params']
       model_params = cur_df['model_params']
-      cur_row = [scenario, N, scale, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2]]
+      # Estimating the marginal SE using the splines and asymptotic normal appx
+      scales = cur_df['scales']
+      loglls = cur_df['loglls']
+      logll_spl = UnivariateSpline(scales, loglls, s=0, k=4)
+      logll_deriv = logll_spl.derivative(n=2)
+      se_marginal = 1./np.sqrt(-logll_deriv(scale))
+      cur_row = [scenario, N, scale, se_marginal, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2]]
       tot_df_rows.append(cur_row)
-    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal','scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta'])
+    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal','se_scale_marginal', 'scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta'])
     # Concatenate to create a new dataframe
     final_df.to_csv(str(output), index=False, header=final_df.columns)
-
-
 
 
 
@@ -427,8 +434,14 @@ rule concatenate_hap_copying_results_chrX_sim:
       params = cur_df['params']
       se_params = cur_df['se_params']
       model_params = cur_df['model_params']
-      cur_row = [scenario, N, scale, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2]]
+      # Estimating the marginal SE using the splines and asymptotic normal appx
+      scales = cur_df['scales']
+      loglls = cur_df['loglls']
+      logll_spl = UnivariateSpline(scales, loglls, s=0, k=4)
+      logll_deriv = logll_spl.derivative(n=2)
+      se_marginal = 1./np.sqrt(-logll_deriv(scale))
+      cur_row = [scenario, N, scale, se_marginal, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2]]
       tot_df_rows.append(cur_row)
-    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal','scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta'])
+    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal', 'se_scale_marginal', 'scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta'])
     # Concatenate to create a new dataframe
     final_df.to_csv(str(output), index=False, header=final_df.columns)
