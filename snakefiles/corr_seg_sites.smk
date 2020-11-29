@@ -50,9 +50,9 @@ rule estimate_autocorr_sA_sB_sims:
 
 rule monte_carlo_sasb_sims:
   input:
-    expand(config['tmpdir'] + 'hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{rep}.npz', rep=np.arange(20))
+    expand(config['tmpdir'] + 'hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{seed}.npz', seed=np.arange(1,21))
   output:
-    corr_SASB = config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{seed,\d+}.monte_carlo_L{L,\d+}.N{N,\d+}.npz'
+    corr_SASB = config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{full_seed,\d+}.monte_carlo_L{L,\d+}.N{N,\d+}.npz'
   wildcard_constraints:
     scenario='(SerialConstant|TennessenEuropean)',
     mod_n = '1',
@@ -64,12 +64,13 @@ rule monte_carlo_sasb_sims:
     for i in tqdm(range(20)):
       corr_sim.calc_windowed_seg_sites(chrom=i, L=int(wildcards.L))
     for i in tqdm(range(20)):
-      corr_sim.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=5000, chrom=i, seed=int(wildcards.seed))
+      corr_sim.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=5000, chrom=i, seed=int(wildcards.full_seed))
 
     # output slightly less
     rec_rate_mean, rec_rate_se, corr_s1_s2, se_r = corr_sim.gen_binned_rec_rate(bins='auto', range=(5e-6,1e-3))
     np.savez_compressed(output.corr_SASB,
                         scenario=wildcards.scenario,
+                        seed=np.int32(wildcards.full_seed),
                         ta = np.int32(wildcards.ta),
                         L = np.int32(wildcards.L),
                         N = np.int32(wildcards.N),
@@ -82,7 +83,7 @@ rule monte_carlo_sasb_sims:
 # Landing rule for generating the simulations ...
 rule estimate_monte_carlo_sA_sB_sims:
   input:
-    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_1_1_{ta}_20_Ne_10000_{seed}.monte_carlo_L{L}.N{N}.npz', scenario=['SerialConstant','TennessenEuropean'], ta=[0,10000], L=1000, N=200, seed=[42])
+    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_1_1_{ta}_20_Ne_10000_{full_seed}.monte_carlo_L{L}.N{N}.npz', scenario=['SerialConstant','TennessenEuropean'], ta=[0,10000], L=1000, N=200, full_seed=42)
 
 
 rule monte_carlo_sA_sB_results:
@@ -96,6 +97,7 @@ rule monte_carlo_sA_sB_results:
       sim = np.load(x)
       # Loading the specific entries
       scenario = sim['scenario']
+      seed = sim['seed']
       N = sim['N']
       ta = sim['ta']
       L = sim['L']
@@ -107,11 +109,11 @@ rule monte_carlo_sA_sB_results:
       assert(rec_rate_mean.size == rec_rate_se.size)
       assert(rec_rate_mean.size == corr_s1_s2.size)
       for i in range(rec_rate_mean.size):
-        cur_row = [scenario, N, ta, L, rec_rate_mean[i], rec_rate_se[i], corr_s1_s2[i], se_r[i]]
+        cur_row = [scenario, N, ta, L, rec_rate_mean[i], rec_rate_se[i], corr_s1_s2[i], se_r[i], seed]
         tot_df.append(cur_row)
 
     # generate the full output
-    final_df = pd.DataFrame(tot_df, columns=['scenario','N','ta','L','rec_rate_mean','rec_rate_se','corr_s1_s2','se_corr'])
+    final_df = pd.DataFrame(tot_df, columns=['scenario','N','ta','L','rec_rate_mean','rec_rate_se','corr_s1_s2','se_corr','seed'])
     final_df = final_df.dropna()
     final_df.to_csv(str(output), index=False, header=final_df.columns)
 
@@ -132,9 +134,9 @@ rule est_Ne_ta_1kb_sim_bootstrap_monte_carlo_loco:
       and the age of the sample from correlation in segregating sites
   """
   input:
-    expand(config['tmpdir'] + 'hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{rep}.npz', rep=np.arange(20))
+    expand(config['tmpdir'] + 'hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{seed}.npz', seed=np.arange(1,21))
   output:
-    bootstrap_params=config['tmpdir'] + 'corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{seed,\d+}.monte_carlo_L{L}.N{N,\d+}.loco.npz'
+    bootstrap_params=config['tmpdir'] + 'corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{full_seed,\d+}.monte_carlo_L{L}.N{N,\d+}.loco.npz'
   wildcard_constraints:
     scenario='(SerialConstant|TennessenEuropean)',
     mod_n = '1',
@@ -149,7 +151,7 @@ rule est_Ne_ta_1kb_sim_bootstrap_monte_carlo_loco:
     for i in tqdm(range(20)):
       corr_sim.calc_windowed_seg_sites(chrom=i, L=int(wildcards.L))
     for i in tqdm(range(20)):
-      corr_sim.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=5000, chrom=i, seed=int(wildcards.seed))
+      corr_sim.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=5000, chrom=i, seed=int(wildcards.full_seed))
 
     # TODO : should we store the intermediates here
     # Leaving one chromosome out, out of 20
@@ -177,12 +179,12 @@ rule est_Ne_ta_1kb_sim_bootstrap_monte_carlo_loco:
     stacked_rec_rates_mean, idx_rec_rates = stack_ragged(rec_rate_mean_storage)
     stacked_corr_s1_s2_mean, idx_corr_s1_s2 = stack_ragged(corr_s1_s2_storage)
 
-    np.savez_compressed(output.bootstrap_params, scenario=wildcards.scenario, ta = np.int32(wildcards.ta), est_params=popt_reps, rec_rates_mean=stacked_rec_rates_mean, idx_rec_rates=idx_rec_rates, corr_s1_s2=stacked_corr_s1_s2_mean, idx_corr_s1_s2=idx_corr_s1_s2)
+    np.savez_compressed(output.bootstrap_params, scenario=wildcards.scenario, seed=np.int32(wildcards.full_seed), ta = np.int32(wildcards.ta), est_params=popt_reps, rec_rates_mean=stacked_rec_rates_mean, idx_rec_rates=idx_rec_rates, corr_s1_s2=stacked_corr_s1_s2_mean, idx_corr_s1_s2=idx_corr_s1_s2)
 
 
 rule est_Ne_ta_1kb_sim_final:
   input:
-    expand(config['tmpdir'] + 'corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{seed}.monte_carlo_L{L}.N{N}.loco.npz', seed=42, Ne=10000, length=20, ta=[0,100,1000,10000], mod_n=1, n_anc=1, scenario=['SerialConstant', 'TennessenEuropean'], L=1000, N=200)
+    expand(config['tmpdir'] + 'corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{full_seed}.monte_carlo_L{L}.N{N}.loco.npz', full_seed=42, Ne=10000, length=20, ta=[0,100,1000,10000], mod_n=1, n_anc=1, scenario=['SerialConstant', 'TennessenEuropean'], L=1000, N=200)
 
 rule collapse_est_ta_Ne:
   input:

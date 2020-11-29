@@ -42,15 +42,14 @@ def ascertain_variants(hap_panel, pos, maf=0.05):
 
 
 ###### --------- Simulations ----------- ######
-# 'data/hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{rep}.npz'
 
 rule sim_demography_single_ancients:
   """
     Generate a tree-sequence of multiple ages
   """
   output:
-    treeseq= config['tmpdir'] + 'hap_copying/hap_panels/{scenario}/hap_panel_{mod_n,\d+}_{n_anc}_{ta,\d+}_{length,\d+}_Ne_{Ne,\d+}_{rep,\d+}.treeseq.gz',
-    hap_panel=config['tmpdir'] + 'hap_copying/hap_panels/{scenario}/hap_panel_{mod_n,\d+}_{n_anc}_{ta,\d+}_{length,\d+}_Ne_{Ne,\d+}_{rep,\d+}.npz',
+    treeseq= config['tmpdir'] + 'hap_copying/hap_panels/{scenario}/hap_panel_{mod_n,\d+}_{n_anc}_{ta,\d+}_{length,\d+}_Ne_{Ne,\d+}_{seed,\d+}.treeseq.gz',
+    hap_panel=config['tmpdir'] + 'hap_copying/hap_panels/{scenario}/hap_panel_{mod_n,\d+}_{n_anc}_{ta,\d+}_{length,\d+}_Ne_{Ne,\d+}_{seed,\d+}.npz',
   wildcard_constraints:
     scenario = '(SerialConstant|TennessenEuropean|IBDNeUK10K)'
   run:
@@ -61,6 +60,7 @@ rule sim_demography_single_ancients:
     mod_n = np.int32(wildcards.mod_n)
     n_anc = np.int32(wildcards.n_anc)
     scenario = wildcards.scenario
+    seed = np.int32(wildcards.seed)
     cur_sim = None
     if scenario == 'SerialConstant':
       cur_sim = SerialConstant(Ne=Ne, mod_n=mod_n, t_anc=[ta], n_anc=[n_anc])
@@ -74,7 +74,7 @@ rule sim_demography_single_ancients:
     else:
       raise ValueError('Improper value input for this simulation!')
     # Conducting the actual simulation ...
-    ts = cur_sim._simulate(mutation_rate=mut_rate, recombination_rate=rec_rate, length=length)
+    ts = cur_sim._simulate(mutation_rate=mut_rate, recombination_rate=rec_rate, length=length, random_seed=seed)
     tszip.compress(ts, str(output.treeseq))
     # Generating the haplotype reference panel...
     geno = ts.genotype_matrix().T
@@ -83,15 +83,7 @@ rule sim_demography_single_ancients:
     node_ids = [s for s in ts.samples()]
     tree = ts.first()
     times = np.array([tree.time(x) for x in node_ids])
-    np.savez_compressed(output.hap_panel, haps=geno, rec_pos=rec_pos, phys_pos=phys_pos, ta=times)
-
-
-rule check_corr_seg_sites:
-  """
-    Estimate the correlation in segregating sites in different demographic scenarios
-  """
-  input:
-    expand(config['tmpdir'] + 'hap_copying/hap_panels/{scenario}/hap_panel_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{rep}.npz', mod_n=1, n_anc=1, rep=np.arange(20), scenario=['SerialConstant', 'TennessenEuropean'], ta=[0, 10000], length=20, Ne=10000)
+    np.savez_compressed(output.hap_panel, haps=geno, rec_pos=rec_pos, phys_pos=phys_pos, ta=times, scenario=scenario, seed=seed)
 
 
 rule sim_demography_multi_ancients:
@@ -99,7 +91,7 @@ rule sim_demography_multi_ancients:
     Generate a tree-sequence of multiple ages
   """
   output:
-    treeseq=config['tmpdir'] + 'full_sim_all/{scenario}/generations_{ta,\d+}_{interval,\d+}/serial_coal_{mod_n, \d+}_{n_anc, \d+}_{length, \d+}_Ne{Ne,\d+}_{rep,\d+}.treeseq.gz',
+    treeseq=config['tmpdir'] + 'full_sim_all/{scenario}/generations_{ta,\d+}_{interval,\d+}/serial_coal_{mod_n, \d+}_{n_anc, \d+}_{length, \d+}_Ne{Ne,\d+}_{seed,\d+}.treeseq.gz',
   wildcard_constraints:
     scenario = '(SerialConstant|SerialBottleneck|SerialBottleneckLate|TennessenEuropean|SerialBottleneckInstant[0-9]*|IBDNeUK10K|SimpleGrowth[0-9]*)'
   run:
@@ -115,6 +107,7 @@ rule sim_demography_multi_ancients:
     t_anc = np.arange(interval, t_a_max+1, interval).tolist()
     n_anc = np.repeat(n_a, len(t_anc)).tolist()
     scenario = wildcards.scenario
+    seed = np.int32(wildcards.seed)
     cur_sim = None
     if scenario == 'SerialConstant':
       cur_sim = SerialConstant(Ne=Ne, mod_n=mod_n, t_anc=t_anc, n_anc=n_anc)
@@ -162,7 +155,7 @@ rule sim_demography_multi_ancients:
     else:
       raise ValueError('Improper value input for this simulation!')
     # Conducting the actual simulation ...
-    tree_seq = cur_sim._simulate(mutation_rate=mut_rate, recombination_rate=rec_rate, length=length)
+    tree_seq = cur_sim._simulate(mutation_rate=mut_rate, recombination_rate=rec_rate, length=length, random_seed=seed)
     tszip.compress(tree_seq, str(output.treeseq))
 
 rule create_hap_panel_all:
@@ -172,7 +165,7 @@ rule create_hap_panel_all:
   input:
     treeseq = rules.sim_demography_multi_ancients.output.treeseq
   output:
-    hap_panel = config['tmpdir']+'full_sim_all/{scenario}/generations_{ta,\d+}_{interval,\d+}/hap_panel_{mod_n, \d+}_{n_anc, \d+}_{length, \d+}_Ne{Ne,\d+}_{rep,\d+}.panel.npz'
+    hap_panel = config['tmpdir']+'full_sim_all/{scenario}/generations_{ta,\d+}_{interval,\d+}/hap_panel_{mod_n, \d+}_{n_anc, \d+}_{length, \d+}_Ne{Ne,\d+}_{seed,\d+}.panel.npz'
   run:
     ts = tszip.decompress(input.treeseq)
     geno = ts.genotype_matrix().T
@@ -181,8 +174,9 @@ rule create_hap_panel_all:
     node_ids = [s for s in ts.samples()]
     tree = ts.first()
     times = np.array([tree.time(x) for x in node_ids])
-    np.savez_compressed(output.hap_panel, haps=geno, rec_pos=rec_pos, phys_pos=phys_pos, ta=times)
-
+    scenario = wildcards.scenario
+    seed = np.int32(wildcards.seed)
+    np.savez_compressed(output.hap_panel, haps=geno, rec_pos=rec_pos, phys_pos=phys_pos, ta=times, scenario=scenario, seed=seed)
 
 rule infer_scale_serial_all_ascertained:
   """
@@ -195,7 +189,7 @@ rule infer_scale_serial_all_ascertained:
   wildcard_constraints:
     scenario = '(SerialConstant|SerialBottleneck|SerialBottleneckLate|TennessenEuropean|SerialBottleneckInstant[0-9]*|SerialMigration_[0-9]*|IBDNeUK10K|SimpleGrowth[0-9]*)'
   output:
-    mle_hap_est = config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n, \d+}_{n_anc, \d+}_{length,\d+}_Ne{Ne,\d+}_{rep,\d+}.asc_{asc, \d+}.ta_{ta_samp, \d+}.scale.npz'
+    mle_hap_est = config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n, \d+}_{n_anc, \d+}_{length,\d+}_Ne{Ne,\d+}_{seed,\d+}.asc_{asc, \d+}.ta_{ta_samp, \d+}.scale.npz'
   run:
     # loading in the data
     cur_data = np.load(input.hap_panel)
@@ -239,7 +233,8 @@ rule infer_scale_serial_all_ascertained:
              params=cur_params,
              se_params=se_params,
              model_params=model_params,
-             mod_freq = afreq_mod)
+             mod_freq = afreq_mod,
+             seed=np.int32(wildcards.seed))
 
 
 # NOTE : we should keep the same time intervals for sampling here ...
@@ -247,9 +242,9 @@ rule calc_infer_scales_asc_all_figures:
   """Rule to calculate all of the simulations for figures on haplotype copying models as a function of time
   """
   input:
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialConstant'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[20000, 10000,5000], rep=np.arange(5), asc=5, ta_samp=np.arange(10,501,10)),
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['IBDNeUK10K', 'TennessenEuropean'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[10000], rep=np.arange(5), asc=5, ta_samp=np.arange(10,501,10)),
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialBottleneckInstant7', 'SerialBottleneckInstant8', 'SerialBottleneckInstant9'], ta=400, interval=10, mod_n=100, n_anc=1, length=40, Ne=1000000, rep=np.arange(5), asc=5, ta_samp=np.arange(10,401,10)),
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialConstant'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[20000, 10000,5000], seed=np.arange(1,5), asc=5, ta_samp=np.arange(20,501,20)),
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['IBDNeUK10K', 'TennessenEuropean'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[10000], seed=np.arange(1,5), asc=5, ta_samp=np.arange(20,501,20)),
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialBottleneckInstant7', 'SerialBottleneckInstant8', 'SerialBottleneckInstant9'], ta=500, interval=10, mod_n=100, n_anc=1, length=40, Ne=1000000, seed=np.arange(1,5), asc=5, ta_samp=np.arange(20,501,20)),
 #     expand('data/hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SimpleGrowth1', 'SimpleGrowth2', 'SimpleGrowth3', 'SimpleGrowth4'], ta=400, interval=5, mod_n=100, n_anc=1, length=40, Ne=1000000, rep=np.arange(5), asc=5, ta_samp=np.arange(5,401,5))
 
 rule concatenate_hap_copying_results:
@@ -263,6 +258,7 @@ rule concatenate_hap_copying_results:
       cur_df = np.load(f)
       #Extract the relevant parameters
       scenario = cur_df['scenario']
+      seed = cur_df['seed']
       N = cur_df['Ne']
       scale = cur_df['scale']
       params = cur_df['params']
@@ -274,9 +270,9 @@ rule concatenate_hap_copying_results:
       logll_spl = UnivariateSpline(scales, loglls, s=0, k=4)
       logll_deriv = logll_spl.derivative(n=2)
       se_marginal = 1./np.sqrt(-logll_deriv(scale))
-      cur_row = [scenario, N, scale, se_marginal, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2]]
+      cur_row = [scenario, N, scale, se_marginal, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2], seed]
       tot_df_rows.append(cur_row)
-    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal','se_scale_marginal', 'scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta'])
+    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal','se_scale_marginal', 'scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta','seed'])
     # Concatenate to create a new dataframe
     final_df.to_csv(str(output), index=False, header=final_df.columns)
 
@@ -301,7 +297,7 @@ rule create_hap_panel_1kg_ceu_real_chrom:
     recmap = 'data/recmaps/chrX_{genmap}.map.txt',
     times_ancient = 'data/hap_copying/chrX_male_analysis/mle_est_real_1kg/ceu_kya_ages.csv'
   output:
-    hap_panel = config['tmpdir'] + 'full_sim_all/{scenario}/ceu_sim_chrX_{genmap}/serial_coal_{mod_n, \d+}_Ne{Ne,\d+}_{rep,\d+}.panel.npz'
+    hap_panel = config['tmpdir'] + 'full_sim_all/{scenario}/ceu_sim_chrX_{genmap}/serial_coal_{mod_n, \d+}_Ne{Ne,\d+}_seed_{seed,\d+}.panel.npz'
   wildcard_constraints:
     scenario = '(SerialConstant|TennessenEuropean|TennessenDoubleGrowthEuropean|TennessenQuadGrowthEuropean|IBDNeUK10K)'
   run:
@@ -315,6 +311,7 @@ rule create_hap_panel_1kg_ceu_real_chrom:
     t_anc = unique_times.tolist()
     n_anc = n_samples.tolist()
     scenario = wildcards.scenario
+    seed=np.int32(wildcards.seed)
     cur_sim = None
     if scenario == 'SerialConstant':
       cur_sim = SerialConstant(Ne=Ne, mod_n=mod_n, t_anc=t_anc, n_anc=n_anc)
@@ -339,15 +336,21 @@ rule create_hap_panel_1kg_ceu_real_chrom:
     rec_map_tbl = pd.read_csv(input.recmap, sep='\s')
     phys_pos_map = rec_map_tbl.Physical_Pos.values
     rec_pos_map = rec_map_tbl.deCODE.values
-    ts = cur_sim._simulate(mutation_rate=mut_rate, recombination_map=recmap)
+    ts = cur_sim._simulate(mutation_rate=mut_rate, recombination_map=recmap, random_seed=seed)
     geno = ts.genotype_matrix().T
     phys_pos = np.array([v.position for v in ts.variants()])
-    # Shouldn't we use the map to interpolate the recombination position?
+    # Use the map to interpolate the recombination position?
     rec_pos = np.interp(phys_pos, phys_pos_map, rec_pos_map) / 1e2
     node_ids = [s for s in ts.samples()]
     tree = ts.first()
     times = np.array([tree.time(x) for x in node_ids])
-    np.savez_compressed(output.hap_panel, haps=geno, rec_pos=rec_pos, phys_pos=phys_pos, ta=times)
+    np.savez_compressed(output.hap_panel,
+                        haps=geno,
+                        rec_pos=rec_pos,
+                        phys_pos=phys_pos,
+                        ta=times,
+                        scenario=scenario,
+                        seed=seed)
 
 
 # NOTE : something is slightly off here ...
@@ -363,7 +366,7 @@ rule infer_scale_serial_ascertained_ceu_sims:
     scenario = '(SerialConstant|TennessenEuropean|TennessenDoubleGrowthEuropean|TennessenQuadGrowthEuropean|IBDNeUK10K)',
     genmap = 'deCODE'
   output:
-    mle_hap_est = config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_{genmap}/mle_scale_{mod_n, \d+}_Ne{Ne,\d+}_{rep, \d+}.asc_{asc, \d+}.ta_{ta_samp, \d+}.scale.npz'
+    mle_hap_est = config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_{genmap}/mle_scale_{mod_n, \d+}_Ne{Ne,\d+}_{seed, \d+}.asc_{asc, \d+}.ta_{ta_samp, \d+}.scale.npz'
   run:
     # loading in the data
     cur_data = np.load(input.hap_panel)
@@ -399,6 +402,7 @@ rule infer_scale_serial_ascertained_ceu_sims:
     # NOTE: we might need some different params being inferred ...
     np.savez(output.mle_hap_est,
              scenario=wildcards.scenario,
+             seed=np.int32(wildcards.seed),
              Ne=np.int32(wildcards.Ne),
              scales=scales,
              loglls=-neg_log_lls,
@@ -415,7 +419,7 @@ times_gen = np.unique(times_gen)
 
 rule ceu_infer_scale_real_chrom:
   input:
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_deCODE/mle_scale_{mod_n}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'IBDNeUK10K'], mod_n=49, Ne=10000, rep=0, asc=10, ta_samp=times_gen)
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_deCODE/mle_scale_{mod_n}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'IBDNeUK10K'], mod_n=49, Ne=10000, seed=42, asc=10, ta_samp=times_gen)
 
 
 rule concatenate_hap_copying_results_chrX_sim:
@@ -429,6 +433,7 @@ rule concatenate_hap_copying_results_chrX_sim:
       cur_df = np.load(f)
       #Extract the relevant parameters
       scenario = cur_df['scenario']
+      seed = cur_df['seed']
       N = cur_df['Ne']
       scale = cur_df['scale']
       params = cur_df['params']
@@ -440,8 +445,8 @@ rule concatenate_hap_copying_results_chrX_sim:
       logll_spl = UnivariateSpline(scales, loglls, s=0, k=4)
       logll_deriv = logll_spl.derivative(n=2)
       se_marginal = 1./np.sqrt(-logll_deriv(scale))
-      cur_row = [scenario, N, scale, se_marginal, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2]]
+      cur_row = [scenario, N, scale, se_marginal, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2], seed]
       tot_df_rows.append(cur_row)
-    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal', 'se_scale_marginal', 'scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta'])
+    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal', 'se_scale_marginal', 'scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta', 'seed'])
     # Concatenate to create a new dataframe
     final_df.to_csv(str(output), index=False, header=final_df.columns)

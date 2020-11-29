@@ -76,7 +76,7 @@ rule sim_two_locus_branch_length:
 # ------- Finalized simulations under different demographic histories -------#
 rule run_two_locus_sims_scenarios:
   output:
-    config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0,\d+}_na{na,\d+}.ta{ta,\d+}.r_{rec_rate, \d+}.Ne{Ne,\d+}.rep{nreps,\d+}.branch_length.npz'
+    config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0,\d+}_na{na,\d+}.ta{ta,\d+}.r_{rec_rate, \d+}.Ne{Ne,\d+}.rep{nreps,\d+}.seed_{seed,\d+}.branch_length.npz'
   wildcard_constraints:
     scenario='SerialConstant|IBDNeUK10K|Tennessen|InstantGrowth[0-9]*'
   run:
@@ -102,12 +102,14 @@ rule run_two_locus_sims_scenarios:
       cur_two_locus = TwoLocusSerialBottleneck(Ne=Ne, ta=ta, n0=1,na=1, Tstart=400, Tend=500000, Nbot=1e2, rec_rate=rec_rate, reps=nreps)
     else:
       raise ValueError('Improper value input for this simulation!')
-    cur_two_locus._simulate()
+    seed = np.int32(wildcards.seed)
+    cur_two_locus._simulate(random_seed=seed)
     cur_two_locus._two_locus_branch_length()
     paired_branch_length = cur_two_locus.pair_branch_length / (2.*cur_two_locus.Ne)
     # Saving the approach here ...
     np.savez(str(output),
              scenario=wildcards.scenario,
+             seed=np.int32(wildcards.seed),
              rec_rate=np.int32(wildcards.rec_rate),
              ta=ta,
              paired_branch_length=paired_branch_length,
@@ -116,9 +118,9 @@ rule run_two_locus_sims_scenarios:
 
 rule run_sims_all:
   input:
-    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne{Ne}.rep{nreps}.branch_length.npz', scenario=['SerialConstant'], n0=1, na=1, ta=np.arange(0, 501, 50), rec_rate=4, Ne=[5000, 10000, 20000], nreps=50000),
-    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne10000.rep{nreps}.branch_length.npz', scenario=['Tennessen', 'IBDNeUK10K'], n0=1, na=1, ta=np.arange(0, 501, 50), rec_rate=4, nreps=50000),
-    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne{Ne}.rep{nreps}.branch_length.npz', scenario=['InstantGrowth7', 'InstantGrowth8', 'InstantGrowth9'], n0=1, na=1, ta=np.arange(0, 501, 50), rec_rate=4, Ne=[1000000], nreps=50000)
+    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne{Ne}.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['SerialConstant'], n0=1, na=1, ta=np.arange(20, 501, 20), seed=42, rec_rate=4, Ne=[5000, 10000, 20000], nreps=50000),
+    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne10000.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['Tennessen', 'IBDNeUK10K'], n0=1, na=1, ta=np.arange(20, 501, 20), seed=42, rec_rate=4, nreps=50000),
+    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne{Ne}.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['InstantGrowth7', 'InstantGrowth8', 'InstantGrowth9'], n0=1, na=1, ta=np.arange(20, 501, 20), seed=42, rec_rate=4, Ne=[1000000], nreps=50000)
 
 
 rule combine_branch_length_est:
@@ -136,15 +138,16 @@ rule combine_branch_length_est:
       paired_bl = df['paired_branch_length']
       ta = df['ta']
       scenario=df['scenario']
+      seed = df['seed']
       rec_rate=df['rec_rate']
       # Compute statistics from the branch_lengths
       corr_bl = pearsonr(paired_bl[:,0], paired_bl[:,1])[0]
       cov_bl = np.cov(paired_bl[:,0], paired_bl[:,1])[0,0]
       ebl = np.nanmean(paired_bl[:,0])
       N = paired_bl.shape[0]
-      cur_row = [scenario, ta, rec_rate, corr_bl, cov_bl, ebl, Ne, N]
+      cur_row = [scenario, ta, rec_rate, corr_bl, cov_bl, ebl, Ne, N, seed]
       tot_df.append(cur_row)
     # Creating the dataframe and outputting to a CSV
-    df_final = pd.DataFrame(tot_df, columns=['scenario','ta','rec_rate','corr_bl','cov_bl','exp_bl','Ne','Nreps'])
+    df_final = pd.DataFrame(tot_df, columns=['scenario','ta','rec_rate','corr_bl','cov_bl','exp_bl','Ne','Nreps', 'seed'])
     df_final = df_final.dropna()
     df_final.to_csv(str(output), index=False, header=df_final.columns)
