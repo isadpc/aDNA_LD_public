@@ -50,7 +50,7 @@ class TwoLocusSimulation:
         self.pair_tmrca = self.pair_tmrca / (2.0 * self.Ne)
         self.treeseq = None
 
-    def _two_locus_branch_length(self):
+    def _two_locus_branch_length(self, scale=False):
         """Calculate the total tree length at each locus."""
         assert self.treeseq is not None
         pair_branch_length = np.zeros(shape=(self.reps, 2))
@@ -63,7 +63,8 @@ class TwoLocusSimulation:
             i += 1
 
         self.pair_branch_length = pair_branch_length
-        self.pair_branch_length = self.pair_branch_length / (2 * self.Ne)
+        if scale:
+            self.pair_branch_length = self.pair_branch_length / (2.0 * self.Ne)
         # reset the iterator
         self.treeseq = None
 

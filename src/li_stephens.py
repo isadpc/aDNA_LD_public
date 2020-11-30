@@ -223,7 +223,6 @@ class LiStephensHMM:
     # Fill in the haplotypes via the sampling procedure
     self.haps = haps_hwe_filled.astype(np.int8)
 
-
   def _filter_sites(self, test_hap):
     """
       Filter to only sites on the haplotype panel that are typed in the test haplotype

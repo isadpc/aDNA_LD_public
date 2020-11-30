@@ -32,10 +32,19 @@ nreps=20
 ibd_ne_demo_file = 'data/demo_models/uk10k.IBDNe.txt'
 
 def ascertain_variants(hap_panel, pos, maf=0.05):
-    """ Ascertaining variants based on frequency """
+    """ Ascertaining variants based on frequency
+    NOTE: performs additional filter for non-zero recombination map distance
+    """
     assert((maf < 0.5) & (maf > 0))
     mean_daf = np.mean(hap_panel, axis=0)
-    idx = np.where((mean_daf > maf) | (mean_daf < (1. - maf)))[0]
+    af_idx = np.where((mean_daf > maf) | (mean_daf < (1. - maf)))[0]
+    # filter positions that are not recombinationally distant
+    pos_diff = pos[1:] - pos[:-1]
+    idx_diff = pos_diff > 0.
+    idx_diff = np.insert(idx_diff, True, 0)
+    # Treat this as the logical and of the MAF check and
+    # ascertainment checks ...
+    idx = np.logical_and(af_idx, idx_diff)
     asc_panel = hap_panel[:,idx]
     asc_pos = pos[idx]
     return(asc_panel, asc_pos, idx)
@@ -212,11 +221,16 @@ rule infer_scale_serial_all_ascertained:
 
     cur_hmm = LiStephensHMM(haps = mod_asc_panel, positions=asc_pos)
     cur_hmm.theta = cur_hmm._infer_theta()
-    scales = np.logspace(2,4,20)
+    scales = np.logspace(2,6,30)
     neg_log_lls = np.array([cur_hmm._negative_logll(anc_asc_hap, scale=s, eps=1e-2) for s in tqdm(scales)])
-    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Bounded', bounds=(1.,1e6), tol=1e-7)
+    min_idx = np.argmin(neg_log_lls)
+    print(scales, neg_log_lls)
+    scales_bracket = (1., scales[min_idx]+1.0)
+    neg_log_lls_brack = (0, neg_log_lls[min_idx])
+    print(ta_test, scales_bracket, neg_log_lls_brack)
+    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Brent', bracket=scales_bracket, tol=1e-3)
     # Estimating both error and scale parameters jointly
-    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[1e2,1e-4], bounds=[(1e1,1e7), (1e-6,0.5)], tol=1e-7)
+    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[1e3, 1e-3], bounds=[(1e1,1e5), (1e-6,0.5)], tol=1e-3)
     cur_params = np.array([np.nan, np.nan])
     se_params = np.array([np.nan, np.nan])
     if mle_params['success']:
@@ -234,17 +248,17 @@ rule infer_scale_serial_all_ascertained:
              se_params=se_params,
              model_params=model_params,
              mod_freq = afreq_mod,
+             asc = np.int32(wildcards.asc),
              seed=np.int32(wildcards.seed))
-
 
 # NOTE : we should keep the same time intervals for sampling here ...
 rule calc_infer_scales_asc_all_figures:
   """Rule to calculate all of the simulations for figures on haplotype copying models as a function of time
   """
   input:
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialConstant'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[20000, 10000,5000], seed=np.arange(1,5), asc=5, ta_samp=np.arange(20,501,20)),
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['IBDNeUK10K', 'TennessenEuropean'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[10000], seed=np.arange(1,5), asc=5, ta_samp=np.arange(20,501,20)),
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialBottleneckInstant7', 'SerialBottleneckInstant8', 'SerialBottleneckInstant9'], ta=500, interval=10, mod_n=100, n_anc=1, length=40, Ne=1000000, seed=np.arange(1,5), asc=5, ta_samp=np.arange(20,501,20)),
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialConstant'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[20000, 10000,5000], seed=np.arange(1,5), asc=[1,5], ta_samp=np.arange(20,501,20)),
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['IBDNeUK10K', 'TennessenEuropean'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[10000], seed=np.arange(1,5), asc=[1,5], ta_samp=np.arange(20,501,20)),
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialBottleneckInstant7', 'SerialBottleneckInstant8', 'SerialBottleneckInstant9'], ta=500, interval=10, mod_n=100, n_anc=1, length=40, Ne=1000000, seed=np.arange(1,5), asc=[1,5], ta_samp=np.arange(20,501,20)),
 #     expand('data/hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SimpleGrowth1', 'SimpleGrowth2', 'SimpleGrowth3', 'SimpleGrowth4'], ta=400, interval=5, mod_n=100, n_anc=1, length=40, Ne=1000000, rep=np.arange(5), asc=5, ta_samp=np.arange(5,401,5))
 
 rule concatenate_hap_copying_results:
@@ -259,6 +273,7 @@ rule concatenate_hap_copying_results:
       #Extract the relevant parameters
       scenario = cur_df['scenario']
       seed = cur_df['seed']
+      asc = cur_df['asc']
       N = cur_df['Ne']
       scale = cur_df['scale']
       params = cur_df['params']
@@ -270,22 +285,15 @@ rule concatenate_hap_copying_results:
       logll_spl = UnivariateSpline(scales, loglls, s=0, k=4)
       logll_deriv = logll_spl.derivative(n=2)
       se_marginal = 1./np.sqrt(-logll_deriv(scale))
-      cur_row = [scenario, N, scale, se_marginal, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2], seed]
+      cur_row = [scenario, N, scale, se_marginal, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2], asc, seed]
       tot_df_rows.append(cur_row)
-    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal','se_scale_marginal', 'scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta','seed'])
+    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal','se_scale_marginal', 'scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta','min_maf','seed'])
     # Concatenate to create a new dataframe
     final_df.to_csv(str(output), index=False, header=final_df.columns)
 
 
 
-
-
-
-
-
-
-
-# ---------- Running a serial simulation using real dates  -----------#
+# ---------- Running a serial simulation using the real dates  -----------#
 gen_time = 30
 
 # TODO : should we simulate a specific chromosome?
@@ -383,16 +391,24 @@ rule infer_scale_serial_ascertained_ceu_sims:
     # Test haplotype in simulations is always the last haplotype...
     test_hap = hap_panel_test[ta_idx,:]
     mod_asc_panel, asc_pos, asc_idx = ascertain_variants(modern_hap_panel, pos, maf = np.int32(wildcards.asc)/100.)
+    print(mod_asc_panel.shape, asc_pos.shape, asc_idx.shape)
     anc_asc_hap = test_hap[asc_idx]
-
     afreq_mod = np.sum(mod_asc_panel, axis=1)
     cur_hmm = LiStephensHMM(haps = mod_asc_panel, positions=asc_pos)
     cur_hmm.theta = cur_hmm._infer_theta()
-    scales = np.logspace(2,4,20)
-    neg_log_lls = np.array([cur_hmm._negative_logll(anc_asc_hap, scale=s, eps=1e-2) for s in tqdm(scales)])
-    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Bounded', bounds=(1.,1e6), tol=1e-7)
+    scales = np.logspace(2,5,30)
+    neg_log_lls = np.zeros(30)
+    i = 0
+    for s in tqdm(scales):
+      cur_neg_logl =  cur_hmm._negative_logll(anc_asc_hap, scale=s, eps=1e-2)
+      print(s, cur_neg_logl)
+      neg_log_lls[i] = cur_neg_logl
+      i += 1
+    # Estimating just the scale
+    start_scale = test_scales[np.argmin(neg_log_lls)]
+    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Brent', bracket=(0, start_scale + 1e2), tol=1e-3)
     # Estimating both error and scale parameters jointly
-    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[1e2, 1e-4], bounds=[(1e1,1e7), (1e-6,1e-1)], tol=1e-7)
+    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[1e2, 1e-4], bounds=[(1e1,1e7), (1e-6,1e-1)], tol=1e-3)
     cur_params = np.array([np.nan, np.nan])
     se_params = np.array([np.nan, np.nan])
     if mle_params['success']:
@@ -410,7 +426,8 @@ rule infer_scale_serial_ascertained_ceu_sims:
              params=cur_params,
              se_params=se_params,
              model_params=model_params,
-             mod_freq = afreq_mod)
+             mod_freq = afreq_mod,
+             asc=np.int32(wildcards.asc))
 
 # setup the times to sample
 times_kya_df = pd.read_csv('data/hap_copying/chrX_male_analysis/mle_est_real_1kg/ceu_kya_ages.csv')
@@ -419,7 +436,7 @@ times_gen = np.unique(times_gen)
 
 rule ceu_infer_scale_real_chrom:
   input:
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_deCODE/mle_scale_{mod_n}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'IBDNeUK10K'], mod_n=49, Ne=10000, seed=42, asc=10, ta_samp=times_gen)
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_deCODE/mle_scale_{mod_n}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'IBDNeUK10K'], mod_n=49, Ne=10000, seed=42, asc=[10], ta_samp=10)
 
 
 rule concatenate_hap_copying_results_chrX_sim:
@@ -434,6 +451,7 @@ rule concatenate_hap_copying_results_chrX_sim:
       #Extract the relevant parameters
       scenario = cur_df['scenario']
       seed = cur_df['seed']
+      asc = cur_df['asc']
       N = cur_df['Ne']
       scale = cur_df['scale']
       params = cur_df['params']
@@ -445,8 +463,8 @@ rule concatenate_hap_copying_results_chrX_sim:
       logll_spl = UnivariateSpline(scales, loglls, s=0, k=4)
       logll_deriv = logll_spl.derivative(n=2)
       se_marginal = 1./np.sqrt(-logll_deriv(scale))
-      cur_row = [scenario, N, scale, se_marginal, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2], seed]
+      cur_row = [scenario, N, scale, se_marginal, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2], asc, seed]
       tot_df_rows.append(cur_row)
-    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal', 'se_scale_marginal', 'scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta', 'seed'])
+    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal', 'se_scale_marginal', 'scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta', 'min_maf', 'seed'])
     # Concatenate to create a new dataframe
     final_df.to_csv(str(output), index=False, header=final_df.columns)

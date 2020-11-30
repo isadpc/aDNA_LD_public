@@ -7,7 +7,6 @@ include: "snakefiles/two_locus_sims.smk"
 include: "snakefiles/corr_seg_sites.smk"
 
 
-
 rule all_results:
   input:
     rules.concatenate_hap_copying_results.output,

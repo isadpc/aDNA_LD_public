@@ -105,7 +105,7 @@ rule run_two_locus_sims_scenarios:
     seed = np.int32(wildcards.seed)
     cur_two_locus._simulate(random_seed=seed)
     cur_two_locus._two_locus_branch_length()
-    paired_branch_length = cur_two_locus.pair_branch_length / (2.*cur_two_locus.Ne)
+    paired_branch_length = cur_two_locus.pair_branch_length
     # Saving the approach here ...
     np.savez(str(output),
              scenario=wildcards.scenario,
@@ -144,10 +144,11 @@ rule combine_branch_length_est:
       corr_bl = pearsonr(paired_bl[:,0], paired_bl[:,1])[0]
       cov_bl = np.cov(paired_bl[:,0], paired_bl[:,1])[0,0]
       ebl = np.nanmean(paired_bl[:,0])
+      Ne_est = ebl / 2. / 2.
       N = paired_bl.shape[0]
-      cur_row = [scenario, ta, rec_rate, corr_bl, cov_bl, ebl, Ne, N, seed]
+      cur_row = [scenario, ta, rec_rate, corr_bl, cov_bl, ebl, Ne, Ne_est, N, seed]
       tot_df.append(cur_row)
     # Creating the dataframe and outputting to a CSV
-    df_final = pd.DataFrame(tot_df, columns=['scenario','ta','rec_rate','corr_bl','cov_bl','exp_bl','Ne','Nreps', 'seed'])
+    df_final = pd.DataFrame(tot_df, columns=['scenario','ta','rec_rate','corr_bl','cov_bl','exp_bl','Ne','Ne_est', 'Nreps', 'seed'])
     df_final = df_final.dropna()
     df_final.to_csv(str(output), index=False, header=df_final.columns)
