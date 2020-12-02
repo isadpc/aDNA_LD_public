@@ -212,18 +212,19 @@ rule collapse_est_ta_Ne:
     final_df.to_csv(str(output), index=False, header=final_df.columns)
 
 
-# # -------------- 3. Estimation from Real Data --------------- #
-# # Individuals who we want for our ancient samples
-# #anc_indivs = ['Clovis', 'Saqqaq', 'Loschbour', 'LBK', 'BOT2016', 'Yamnaya', 'Bichon', 'DenisovaPinky', 'UstIshim', 'AltaiNea']
-# anc_indivs = ['Loschbour', 'LBK','Bichon', 'UstIshim']
+# -------------- 3. Estimation from Real Data --------------- #
+# Individuals who we want for our ancient samples
+anc_indivs = ['Loschbour', 'LBK','Bichon', 'UstIshim']
 
-
-# # Choosing modern french individuals
-# mod_indivs = ['LP6005441-DNA_A05', 'LP6005441-DNA_B05', 'SS6004468']
-
-# mod_east_asian = ['SS6004469', 'LP6005441-DNA_D05', 'LP6005441-DNA_C05']
-
-# mod_africa = ['SS6004475', 'LP6005442-DNA_B02', 'LP6005442-DNA_A02']
+rec_bins = np.arange(0.01, 1.01, 0.01)
+rec_map_types = {"Physical_Pos" : np.uint64,
+                 "deCODE" : np.float32,
+                 "COMBINED_LD" : np.float32,
+                 "YRI_LD": np.float32,
+                 "CEU_LD" : np.float32,
+                 "AA_Map": np.float32,
+                 "African_Enriched" : np.float32,
+                 "Shared_Map" : np.float32}
 
 
 # #Directory of current data currently
@@ -232,239 +233,165 @@ rule collapse_est_ta_Ne:
 # thousand_genomes_dir = '/home/abiddanda/novembre_lab2/data/external_public/1kg_phase3/haps/'
 # KGP_BIALLELIC = '/home/abiddanda/novembre_lab2/data/external_public/1kg_phase3/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.biallelic_snps.vcf.gz'
 
-# #recombination rate files that we want to use
-# recomb_rate_dir = 'data/maps_b37/'
-# rec_bins = np.arange(0.01, 1.01, 0.01)
-# rec_map_types = {"Physical_Pos" : np.uint64,
-#                  "deCODE" : np.float32,
-#                  "COMBINED_LD" : np.float32,
-#                  "YRI_LD": np.float32,
-#                  "CEU_LD" : np.float32,
-#                  "AA_Map": np.float32,
-#                  "African_Enriched" : np.float32,
-#                  "Shared_Map" : np.float32}
-
-# # Definition for the autosomes...
-# AUTOSOMES = np.arange(1,23)
-
-# # Reading in th individuals
-# pop_1kg_df = pd.read_table(thousand_genomes_dir + 'integrated_call_samples_v3.20130502.ALL.panel')
-
-
-
-# ### ----- Rules to setup the ancient datasets   ----- ###
-# rule extract_autosomes:
-#   '''
-#     Extract autosomal samples only for the ancient samples we designate
-#   '''
-#   input:
-#     data_dir + 'samtools.combined.chr{CHROM}.release1.rn.vcf.gz'
-#   output:
-#     vcf='data/real_data_autosomes/ancient_data.chr{CHROM,\d+}.damgaard.vcf.gz',
-#     idx='data/real_data_autosomes/ancient_data.chr{CHROM,\d+}.damgaard.vcf.gz.tbi'
-#   run:
-#     indiv_str = ','.join(anc_indivs)
-#     shell('bcftools view --threads 5 -s {indiv_str} {input} | bcftools annotate -x INFO,^FORMAT/GT | bgzip > {output.vcf}')
-#     shell('tabix {output.vcf}')
-
-# rule get_1kg_variant_pos:
-# 	'''
-# 		Extract only the 1000 Genomes Bi-allelic variants
-# 	'''
-# 	input:
-# 		kg_sites = KGP_BIALLELIC,
-# 		vcf = rules.extract_autosomes.output.vcf,
-# 		idx = rules.extract_autosomes.output.idx
-# 	output:
-# 		vcf = 'data/real_data_autosomes/ancient_data.chr{CHROM,\d+}.1kg_filt.damgaard.vcf.gz',
-# 		idx = 'data/real_data_autosomes/ancient_data.chr{CHROM,\d+}.1kg_filt.damgaard.vcf.gz.tbi'
-# 	shell:
-# 		"""
-# 			bcftools view -R {input.kg_sites} {input.vcf} | bgzip -@10 > {output.vcf}
-# 			tabix -f {output.vcf}
-# 		"""
-
-# rule sgdp_ancient_merge:
-#   input:
-#     anc_vcf = rules.extract_autosomes.output.vcf,
-#     sgdp_vcf = sgdp_dir + 'sgdp_total_merged_chr{CHROM}.vcf.gz'
-#   output:
-#     merged_vcf = 'data/real_data_autosomes/merged_sgdp/ancient_sgdp_total_merged.chr{CHROM}.vcf.gz',
-#     merged_vcf_idx = 'data/real_data_autosomes/merged_sgdp/ancient_sgdp_total_merged.chr{CHROM}.vcf.gz.tbi'
-#   run:
-#     """
-#       bcftools merge -0 {input.anc_vcf} {input.sgdp_vcf} -Ou | bcftools view -c 1 -m2 -M2 -v snps | bcftools annotate -x INFO,^FORMAT/GT | bgzip -@5 > {output.merged_vcf}
-#       tabix {output.merged_vcf}
-#     """
-
 # rule kg_phase3_ancient_merge:
-#   """
-#     Merge the ancient data with data from the 1000 Genomes Phase 3 project (phased data!)
-#   """
 #   input:
-#     anc_vcf = rules.extract_autosomes.output.vcf,
-#     kg_phase3_vcf = thousand_genomes_dir + 'ALL.chr{CHROM}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz'
-#   output:
-#     merged_vcf = 'data/real_data_autosomes/merged_kgp/ancient_kgp_total_merged.chr{CHROM,\d+}.vcf.gz',
-#     merged_vcf_idx = 'data/real_data_autosomes/merged_kgp/ancient_kgp_total_merged.chr{CHROM,\d+}.vcf.gz.tbi'
-#   shell:
-#     """
-#     bcftools merge -0 {input.anc_vcf} {input.kg_phase3_vcf} -Ou | bcftools view -c 1:minor -m2 -M2 -v snps | bcftools annotate -x INFO,^FORMAT/GT | bgzip -@5 > {output.merged_vcf}
-#     tabix -f {output.merged_vcf}
-#     """
+#     merged_vcf = 'data/raw_data/merged_kgp/ancient_kgp_total_merged.chr{CHROM}.vcf.gz',
+#     merged_vcf_idx = 'data/raw_data/merged_kgp/ancient_kgp_total_merged.chr{CHROM}.vcf.gz.tbi'
 
-# rule gen_seg_sites_table_haploid_modern_test:
-#   """
-#     Calculate table of segregating sites when we have a modern haplotype
-#   """
-#   input:
-#     vcf = 'data/real_data_autosomes/merged_{proj}/ancient_{proj}_total_merged.chr{CHROM}.vcf.gz',
-#     rec_df = recomb_rate_dir + 'maps_chr.{CHROM}'
-#   output:
-#     tmp_vcf = temp('data/corr_seg_sites/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap,\d+}.vcf.gz'),
-#     tmp_vcf_idx = temp('data/corr_seg_sites/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap,\d+}.vcf.gz.tbi'),
-#     pos_ac = 'data/corr_seg_sites/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap,\d+}.test.npz'
-#   wildcard_constraints:
-#     recmap = '(COMBINED_LD|deCODE)',
-#     proj = '(kgp|sgdp)'
-#   run:
-#     # 1. Generate the filtered VCF here ...
-#     indiv_ids = "%s,%s" % (wildcards.ANC, wildcards.MOD)
-#     shell('bcftools view -s {indiv_ids} -c 1:minor {input.vcf} | bgzip -@10 > {output.tmp_vcf}')
-#     shell('tabix -f {output.tmp_vcf}')
-#     # 2. Look and read in the data set
-#     vcf_data = allel.read_vcf(output.tmp_vcf)
-#     gt = vcf_data['calldata/GT']
-#     pos = vcf_data['variants/POS']
-#     chrom = vcf_data['variants/CHROM']
-#     gt_anc = gt[:,0,0] + gt[:,0,1]
-#     gt_mod_hap = gt[:,1,int(wildcards.hap)]
+rule gen_seg_sites_table_haploid_modern_test:
+  """
+    Calculate table of segregating sites when we have a modern haplotype
+  """
+  input:
+    vcf = 'data/raw_data/merged_wgs_ancient/ancient_kgp_total_merged.chr{CHROM}.vcf.gz',
+    rec_df = 'data/raw_data/full_recomb_maps/maps_chr.{CHROM}'
+  output:
+    tmp_vcf = temp(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap,\d+}.vcf.gz'),
+    tmp_vcf_idx = temp(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap,\d+}.vcf.gz.tbi'),
+    pos_ac = config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap,\d+}.test.npz'
+  wildcard_constraints:
+    recmap = '(COMBINED_LD|deCODE)',
+    proj = 'kgp'
+  run:
+    # 1. Generate the filtered VCF here ...
+    indiv_ids = "%s,%s" % (wildcards.ANC, wildcards.MOD)
+    shell('bcftools view -s {indiv_ids} -c 1:minor {input.vcf} | bgzip -@10 > {output.tmp_vcf}')
+    shell('tabix -f {output.tmp_vcf}')
+    # 2. Look and read in the data set
+    vcf_data = allel.read_vcf(output.tmp_vcf)
+    gt = vcf_data['calldata/GT']
+    pos = vcf_data['variants/POS']
+    chrom = vcf_data['variants/CHROM']
+    gt_anc = gt[:,0,0] + gt[:,0,1]
+    gt_mod_hap = gt[:,1,int(wildcards.hap)]
 
-#     # generate recombination rates here
-#     rec_df = pd.read_csv(input.rec_df, sep='\s+', low_memory=True, dtype=rec_map_types)
-#     rec_pos = np.array(rec_df['Physical_Pos'], dtype=np.uint32)
-#     rec_dist = np.array(rec_df[str(wildcards.recmap)], dtype=np.float32)
-#     interp_rec_pos = np.interp(pos, rec_pos, rec_dist)
-#     np.savez_compressed(output.pos_ac, chrom=chrom, pos=pos, gt_anc=gt_anc, gt_mod_hap=gt_mod_hap, rec_pos=interp_rec_pos)
+    # generate recombination rates here
+    rec_df = pd.read_csv(input.rec_df, sep='\s+', low_memory=True, dtype=rec_map_types)
+    rec_pos = np.array(rec_df['Physical_Pos'], dtype=np.uint32)
+    rec_dist = np.array(rec_df[str(wildcards.recmap)], dtype=np.float32)
+    interp_rec_pos = np.interp(pos, rec_pos, rec_dist)
+    np.savez_compressed(output.pos_ac, chrom=chrom, pos=pos, gt_anc=gt_anc, gt_mod_hap=gt_mod_hap, rec_pos=interp_rec_pos)
 
-# rule gen_seg_sites_table_diploid_test:
-#   """
-#     Calculates segregating sites within diploid samples in a way similar to the haploid version above
-#   """
-#   input:
-#     vcf = 'data/real_data_autosomes/merged_{proj}/ancient_{proj}_total_merged.chr{CHROM}.vcf.gz',
-#     rec_df = recomb_rate_dir + 'maps_chr.{CHROM}'
-#   output:
-#     tmp_vcf = temp('data/corr_seg_sites/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.vcf.gz'),
-#     tmp_vcf_idx = temp('data/corr_seg_sites/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.vcf.gz.tbi'),
-#     pos_ac = 'data/corr_seg_sites/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.test.npz'
-#   wildcard_constraints:
-#     recmap = '(COMBINED_LD|deCODE)',
-#     proj = '(sgdp|kgp)'
-#   run:
-#     indiv_ids = "%s,%s" % (wildcards.ANC, wildcards.MOD)
-#     shell('bcftools view -s {indiv_ids} -c 1:minor {input.vcf} | bgzip > {output.tmp_vcf}; tabix -f {output.tmp_vcf}')
-#     vcf_data = allel.read_vcf(output.tmp_vcf)
-#     gt = vcf_data['calldata/GT']
-#     pos = vcf_data['variants/POS']
-#     chrom = vcf_data['variants/CHROM']
-#     gt_anc = gt[:,0,0] + gt[:,0,1]
-#     gt_mod = gt[:,1,0] + gt[:,1,1]
-#     # generate recombination rates here
-#     rec_df = pd.read_csv(input.rec_df, sep='\s+', low_memory=True, dtype=rec_map_types)
-#     rec_pos = np.array(rec_df['Physical_Pos'], dtype=np.uint32)
-#     rec_dist = np.array(rec_df[str(wildcards.recmap)], dtype=np.float32)
-#     interp_rec_pos = np.interp(pos, rec_pos, rec_dist)
-#     np.savez_compressed(output.pos_ac, chrom=chrom, pos=pos, gt_anc=gt_anc, gt_mod=gt_mod, rec_pos=interp_rec_pos)
+rule gen_seg_sites_table_diploid_test:
+  """
+    Calculates segregating sites within diploid samples in a way similar to the haploid version above
+  """
+  input:
+    vcf = 'data/raw_data/merged_wgs_ancient/ancient_kgp_total_merged.chr{CHROM}.vcf.gz',
+    rec_df = 'data/raw_data/full_recomb_maps/maps_chr.{CHROM}'
+  output:
+    tmp_vcf = temp(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.vcf.gz'),
+    tmp_vcf_idx = temp(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.vcf.gz.tbi'),
+    pos_ac = config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.test.npz'
+  wildcard_constraints:
+    recmap = '(COMBINED_LD|deCODE)',
+    proj = 'kgp'
+  run:
+    indiv_ids = "%s,%s" % (wildcards.ANC, wildcards.MOD)
+    shell('bcftools view -s {indiv_ids} -c 1:minor {input.vcf} | bgzip > {output.tmp_vcf}; tabix -f {output.tmp_vcf}')
+    vcf_data = allel.read_vcf(output.tmp_vcf)
+    gt = vcf_data['calldata/GT']
+    pos = vcf_data['variants/POS']
+    chrom = vcf_data['variants/CHROM']
+    gt_anc = gt[:,0,0] + gt[:,0,1]
+    gt_mod = gt[:,1,0] + gt[:,1,1]
+    # generate recombination rates here
+    rec_df = pd.read_csv(input.rec_df, sep='\s+', low_memory=True, dtype=rec_map_types)
+    rec_pos = np.array(rec_df['Physical_Pos'], dtype=np.uint32)
+    rec_dist = np.array(rec_df[str(wildcards.recmap)], dtype=np.float32)
+    interp_rec_pos = np.interp(pos, rec_pos, rec_dist)
+    np.savez_compressed(output.pos_ac, chrom=chrom, pos=pos, gt_anc=gt_anc, gt_mod=gt_mod, rec_pos=interp_rec_pos)
 
 
-# rule haploid_modern_test:
-#   """
-#     Generating the haploid modern testing setup
-#   """
-#   input:
-#     expand('data/corr_seg_sites/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap}.test.npz', ANC=['LBK', 'Bichon', 'Loschbour', 'UstIshim', 'NA12878'], MOD=['NA12830'], recmap='deCODE', proj='kgp', hap=[1], CHROM=np.arange(1,23)),
-#     expand('data/corr_seg_sites/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap}.test.npz', ANC=['LBK', 'Bichon', 'Loschbour', 'UstIshim'], MOD=mod_indivs[0], recmap='deCODE', proj='sgdp', hap=[1], CHROM=np.arange(1,23))
+rule haploid_modern_test:
+  """
+    Generating the haploid modern testing setup
+  """
+  input:
+    expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap}.test.npz', ANC=['LBK', 'Bichon', 'Loschbour', 'UstIshim', 'NA12878'], MOD=['NA12830'], recmap='deCODE', proj='kgp', hap=[1], CHROM=np.arange(1,23))
 
 
-# rule diploid_modern_test:
-#   """
-#     Generating the diploid testing setup
-#   """
-#   input:
-#     expand('data/corr_seg_sites/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.test.npz', CHROM=np.arange(1,23), ANC=['LBK', 'UstIshim'], MOD=['NA12830'], recmap='deCODE', proj='kgp'),
-#     expand('data/corr_seg_sites/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.test.npz', CHROM=np.arange(1,23), ANC=['LBK',  'UstIshim'], MOD=mod_indivs[0], recmap='deCODE', proj='sgdp')
+rule diploid_modern_test:
+  """
+    Generating the diploid testing setup
+  """
+  input:
+    expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.test.npz', CHROM=np.arange(1,23), ANC=['LBK', 'UstIshim'], MOD=['NA12830'], recmap='deCODE', proj='kgp')
 
 
-# PILOT_MASK = 'data/genome_masks/pilot_exclusion_mask.renamed.bed'
-# CENTROMERE_MASK = 'data/genome_masks/hg19.centromere.autosomes.renamed.bed'
-# CENTROMERE_AND_MAPPABILITY = 'data/genome_masks/exclusion_mask/hs37d5_autosomes.mask.exclude.filt.bed'
+PILOT_MASK = 'data/raw_data/genome_masks/pilot_exclusion_mask.renamed.bed'
+CENTROMERE_MASK = 'data/raw_data/genome_masks/hg19.centromere.autosomes.renamed.bed'
+CENTROMERE_AND_MAPPABILITY = 'data/raw_data/genome_masks/exclusion_mask/hs37d5_autosomes.mask.exclude.filt.bed'
 
-# MASK_DICT = {'none' : None, 'pilot' : PILOT_MASK, 'centromere': CENTROMERE_MASK, 'centromere_mappability': CENTROMERE_AND_MAPPABILITY}
+MASK_DICT = {'none' : None, 'pilot' : PILOT_MASK, 'centromere': CENTROMERE_MASK, 'centromere_mappability': CENTROMERE_AND_MAPPABILITY}
 
-# rule monte_carlo_sA_sB_est_haploid_autosomes:
-#   """
-#     Estimate of the Monte-Carlo correlation in sA  vs. sB for all chromosomes
-#   """
-#   input:
-#     seg_sites_haploid = expand('data/corr_seg_sites/anc_{{ANC}}_mod_{{MOD}}/interpolated_{{proj}}_{{recmap}}_chr{CHROM}.haploid_modern_{{hap}}.test.npz', CHROM=np.arange(1,23)),
-#     mask =  lambda wildcards: MASK_DICT[wildcards.mask]
-#   output:
-#     corr_SASB = 'data/corr_seg_sites/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap,\d+}.seed{seed,\d+}.monte_carlo_L{L,\d+}.N{N,\d+}.npz'
-#   wildcard_constraints:
-#     recmap = '(COMBINED_LD|deCODE)',
-#     mask='(centromere|centromere_mappability|pilot)',
-#     proj='kgp',
-#     hap='0|1'
-#   run:
-#     cur_corr = CorrSegSitesRealDataHaploid()
-#     for f in tqdm(input.seg_sites_haploid):
-#       cur_corr._load_data(f, miss_to_nan=False)
-#     cur_corr._conv_cM_to_morgans()
-#     for i in tqdm(cur_corr.chrom_pos_dict):
-#       cur_corr.calc_windowed_seg_sites(chrom=i, mask=input.mask)
-#       cur_corr.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=2000, chrom=i, seed=int(wildcards.seed))
-#     # Computing the monte-carlo estimates that we have
-#     xs = np.logspace(-5.0, -3, 30)
-#     rec_rate_mean, rec_rate_se, corr_s1_s2, se_r = cur_corr.gen_binned_rec_rate(bins=xs)
-#     np.savez_compressed(output.corr_SASB, rec_rate_mean=rec_rate_mean, rec_rate_se=rec_rate_se, corr_s1_s2=corr_s1_s2, se_r=se_r)
-
-
-# rule autocorr_test_corr_sA_sB_haploid_autosomes:
-#   """
-#     Compute autocorrelation for sA vs sB for all chromosomes
-#   """
-#   input:
-#     seg_sites_haploid = expand('data/corr_seg_sites/anc_{{ANC}}_mod_{{MOD}}/interpolated_{{proj}}_{{recmap}}_chr{CHROM}.haploid_modern_{{hap}}.test.npz', CHROM=np.arange(1,23)),
-#     mask =  lambda wildcards: MASK_DICT[wildcards.mask]
-#   output:
-#     corr_SASB = 'data/corr_seg_sites/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap,\d+}.seed{seed,\d+}.autocorr_L{L,\d+}.N{N,\d+}.npz'
-#   run:
-#     cur_corr = CorrSegSitesRealDataHaploid()
-#     for i in tqdm(input.seg_sites_haploid):
-#       cur_corr._load_data(i)
-#     for i in tqdm(range(1,23)):
-#       cur_corr.calc_windowed_seg_sites(chrom=i, L=int(wildcards.L), mask=input.mask)
-
-#     rec_rate_mean = np.zeros(shape=(int(wildcards.N),22))
-#     corr_s1_s2 = np.zeros(shape=(int(wildcards.N), 22))
-#     for i in tqdm(range(1, int(wildcards.N))):
-#       a,b = cur_corr.autocorr_sA_sB(sep=i)
-#       rec_rate_mean[i-1,:] = a
-#       corr_s1_s2[i-1,:] = b
-#     np.savez_compressed(output.corr_SASB, rec_rate_mean=rec_rate_mean, corr_s1_s2=corr_s1_s2)
+rule monte_carlo_sA_sB_est_haploid_autosomes:
+  """
+    Estimate of the Monte-Carlo correlation in sA  vs. sB for all chromosomes
+  """
+  input:
+    seg_sites_haploid = expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{{ANC}}_mod_{{MOD}}/interpolated_{{proj}}_{{recmap}}_chr{CHROM}.haploid_modern_{{hap}}.test.npz', CHROM=np.arange(1,23)),
+    mask =  lambda wildcards: MASK_DICT[wildcards.mask]
+  output:
+    corr_SASB = config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap,\d+}.seed{seed,\d+}.monte_carlo_L{L,\d+}.N{N,\d+}.npz'
+  wildcard_constraints:
+    recmap = '(COMBINED_LD|deCODE)',
+    mask='(centromere|centromere_mappability|pilot)',
+    proj='kgp',
+    hap='0|1'
+  run:
+    cur_corr = CorrSegSitesRealDataHaploid()
+    for f in tqdm(input.seg_sites_haploid):
+      cur_corr._load_data(f, miss_to_nan=False)
+    cur_corr._conv_cM_to_morgans()
+    for i in tqdm(cur_corr.chrom_pos_dict):
+      cur_corr.calc_windowed_seg_sites(chrom=i, mask=input.mask)
+      cur_corr.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=2000, chrom=i, seed=int(wildcards.seed))
+    # Computing the monte-carlo estimates that we have
+    xs = np.logspace(-5.0, -3, 30)
+    rec_rate_mean, rec_rate_se, corr_s1_s2, se_r = cur_corr.gen_binned_rec_rate(bins=xs)
+    np.savez_compressed(output.corr_SASB, rec_rate_mean=rec_rate_mean, rec_rate_se=rec_rate_se, corr_s1_s2=corr_s1_s2, se_r=se_r)
 
 
+# Testing out with multiple samples in there ...
+pop_1kg_df = pd.read_table('data/raw_data/1kg_panel/integrated_call_samples_v3.20130502.ALL.panel')
 
-# # Testing out with multiple samples in there ...
-# test_yri_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'YRI']['sample'].values[:3]
-# test_chb_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'CHB']['sample'].values[:3]
-# test_ceu_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'CEU']['sample'].values
-# test_gih_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'GIH']['sample'].values[:3]
-# test_indivs_1kg = np.hstack([test_yri_1kg, test_chb_1kg, test_ceu_1kg, test_gih_1kg, np.array('NA12830')])
+test_yri_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'YRI']['sample'].values[:3]
+test_chb_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'CHB']['sample'].values[:3]
+test_ceu_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'CEU']['sample'].values
+test_gih_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'GIH']['sample'].values[:3]
+test_indivs_1kg = np.hstack([test_yri_1kg, test_chb_1kg, test_ceu_1kg, test_gih_1kg, np.array('NA12830')])
 
 
+rule monte_carlo_real_data_1kg_samples:
+  input:
+    expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=['LBK', 'UstIshim'], MOD=test_indivs_1kg, recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50])
 
-# rule monte_carlo_real_data_1kg_samples:
-#   input:
-#     expand('data/corr_seg_sites/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=['LBK', 'UstIshim'], MOD=test_ceu_1kg, recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50])
+
+rule concatenate_tot_corr_piA_piB:
+  input:
+    files = expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=['LBK', 'UstIshim'], MOD=test_indivs_1kg, recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=50)
+  output:
+    'results/corr_seg_sites/monte_carlo_est_LBK_UstIshim.csv'
+  run:
+    tot_df_rows = []
+    for a in ['LBK','UstIshim']:
+      # Getting only files with that filename on them
+      valid_files = [x for x in input.files if a in x]
+      for x in tqdm(test_ceu_1kg):
+        print('Corr(pi_B, pi_B) with: %s' % x)
+        fname = [y for y in valid_files if x in y]
+        assert(len(fname) >= 1)
+        print(fname)
+        df = np.load(fname[-1])
+        rec_rate_mean = df['rec_rate_mean']
+        mean_corr_s1_s2 = df['corr_s1_s2']
+        rec_rate_se = df['rec_rate_se']
+        se_r = df['se_r']
+        assert(rec_rate_mean.size == mean_corr_s1_s2.size)
+        for i in range(rec_rate_mean.size):
+          cur_row = [a,x,rec_rate_mean[i], rec_rate_se[i], mean_corr_s1_s2[i], se_r[i]]
+          tot_df_rows.append(cur_row)
+    df = pd.DataFrame(tot_df_rows, columns=['ANC_ID','MOD_ID','rec_rate_mean','rec_rate_se', 'corr_piA_piB', 'se_corr_piA_piB'])
+    final_df = df.dropna()
+    final_df.to_csv(str(output), index=False, header=final_df.columns)
