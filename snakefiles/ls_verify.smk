@@ -76,7 +76,7 @@ rule infer_scale_real_map:
     df = np.load(input.hap_panel)
     ls_model = LiStephensHMM(df['haps'], df['rec_pos'])
     # Setting up the test haplotypes
-    test_haps = [ls_model.sim_haplotype(scale=s, eps=1e-2, seed=int(wildcards.seed))[0] for s in scales_true]
+    test_haps = [ls_model._sim_haplotype(scale=s, eps=1e-2, seed=int(wildcards.seed))[0] for s in scales_true]
     # Setting result directories ...
     scales_marg_hat = np.zeros(scales_true.size)
     scales_jt_hat = np.zeros(scales_true.size)
@@ -85,11 +85,15 @@ rule infer_scale_real_map:
     se_eps_jt_hat = np.zeros(scales_true.size)
     # Iterate through all of these sequentially
     for i in tqdm(range(scales_true.size)):
+      scales = np.logspace(2,6,30)
+      neg_log_lls = np.array([ls_model._negative_logll(test_haps[i], scale=s, eps=1e-2) for s in tqdm(scales)])
+      min_idx = np.argmin(neg_log_lls)
+      scales_bracket = (1., scales[min_idx]+1.0)
       # Inferring the marginal
-      res = ls_model.infer_scale(test_haps[i], eps=1e-2, bounds=(1.,1e6), method='bounded', tol=1e-7, options={'disp':3})
+      res = ls_model._infer_scale(test_haps[i], eps=1e-2, method='Brent', bracket=scales_bracket, tol=1e-3, options={'disp':3})
       scales_marg_hat[i] = res.x
-      # Inferring the joint values
-      res_jt = ls_model.infer_params(test_haps[i], x0=[1e2,1e-3], bounds=[(1.,1e7), (1e-6,0.2)], tol=1e-7)
+      # Inferring the joint values (initialize at the marginal here ...)
+      res_jt = ls_model._infer_params(test_haps[i], x0=[res.x,1e-3], bounds=[(1.,1e6), (1e-3,0.5)], tol=1e-3)
       scales_jt_hat[i] = res_jt.x[0]
       eps_jt_hat[i] = res_jt.x[1]
       se_scales_jt_hat[i] = np.sqrt(res_jt.hess_inv.todense()[0,0])

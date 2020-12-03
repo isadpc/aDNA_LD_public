@@ -8,13 +8,18 @@ import numpy as np
 import allel
 import pandas as pd
 from tqdm import tqdm
+from numpy.random import binomial
+from scipy.interpolate import UnivariateSpline
 
 sys.path.append('src/')
-from li_stephens import *
+from li_stephens import LiStephensHMM
+
+
+# Import configurations to add some things
+configfile: "config.yml"
 
 # NOTE: we can swap this out for the full dataset with lower-coverage individuals as well...
-ancient_samples = pd.read_csv('data/hap_copying/chrX_male_analysis/sample_lists/ancient_5x_individuals.txt', sep='\t')
-
+ancient_samples = pd.read_csv('data/hap_copying/chrX_male_analysis/sample_lists/ancient_individuals.txt', sep='\t')
 
 def gen_raw_haps(x_chrom_data, panel_file, test_id='NA20827.SG'):
     """
@@ -87,6 +92,13 @@ def gen_filt_panels(x_chrom_data, panel_file, test_id='NA20827.SG', fill_hwe=Fal
     assert(np.all(gt_panel_filt >= 0) & np.all(gt_panel_filt < 2))
     return(gt_panel_filt, cm_pos_filt, indiv_hap_filt)
 
+def calc_se_spline(scales, loglls, mle_scale):
+    """Calculate the standard errors using the spline."""
+    logll_spl = UnivariateSpline(scales, loglls, s=0, k=4)
+    logll_deriv2 = logll_spl.derivative(n=2)
+    se = se = 1./np.sqrt(-logll_deriv2(mle_scale))
+    return(se)  
+  
 
 rule estimate_jump_rate_sample_real_1kg:
   """
@@ -105,35 +117,84 @@ rule estimate_jump_rate_sample_real_1kg:
     raw_panel, raw_cmpos, raw_bppos, raw_testhap = gen_raw_haps(x_chrom_data=input.hap_panel_chrX_1kg, panel_file=input.panel_indivs_file, test_id=str(wildcards.sample))
     panel, pos, test_hap = gen_filt_panels(x_chrom_data=input.hap_panel_chrX_1kg, panel_file=input.panel_indivs_file, test_id=str(wildcards.sample), fill_hwe=True)
     ls_model = LiStephensHMM(haps=panel, positions=pos)
-    n = 10
-    jump_rates = np.logspace(2,5,n)
-    log_ll_est = np.zeros(n, dtype=np.float32)
+    ls_model.theta = ls_model._infer_theta()
+    print(ls_model.n_snps, ls_model.n_samples, ls_model.theta)
+    n = 30
+    scales = np.logspace(2,6,n)
+    neg_log_lls = np.zeros(n, dtype=np.float32)
     for j in tqdm(range(n)):
-      log_ll_est[j] = -ls_model.negative_logll(test_hap, scale=jump_rates[j])
-    scale_inf_res = ls_model.infer_scale(test_hap, method='Bounded', bounds=(1.,1e6), tol=1e-4)
+      neg_log_lls[j] = ls_model._negative_logll(test_hap, eps=1e-2, scale=scales[j])
+    min_idx = np.argmin(neg_log_lls)
+    print(scales, neg_log_lls)
+    scales_bracket = (1., scales[min_idx]+1.0)
+    scale_inf_res = ls_model._infer_scale(test_hap, method='Brent', bracket=scales_bracket, tol=1e-3)
     # Setting the error rate to be similar to the original LS-Model
-    mle_params = ls_model.infer_params(test_hap, x0=[1e2, 1e-3], bounds=[(1e1,1e7),(1e-6,0.9)], tol=1e-4)
+    # NOTE: We initialize the x0 using the marginal solution for the scale?
+    mle_params = ls_model._infer_params(test_hap, x0=[scales[min_idx], 1e-3], bounds=[(1e1,1e6),(1e-6,0.5)], tol=1e-3)
     cur_params = np.array([np.nan,np.nan])
     se_params = np.array([np.nan,np.nan])
     if mle_params['success']:
       cur_params = mle_params['x']
       se_params = np.array([np.sqrt(mle_params.hess_inv.todense()[0,0]), np.sqrt(mle_params.hess_inv.todense()[1,1])])
-    # getting some model stats
-    model_stats = np.array([ls_model.nsnps, ls_model.nsamples])
-    np.savez_compressed(output.mle_hap_copying_res, hap_panel=ls_model.haps, query_hap=test_hap, positions=ls_model.positions, raw_panel=raw_panel, raw_bppos=raw_bppos, raw_cmpos=raw_cmpos, raw_query_hap=raw_testhap, jump_rates=jump_rates, logll=log_ll_est, mle_params=cur_params, se_params=se_params, scale_inf=scale_inf_res['x'], model_stats=model_stats, sampleID=np.array([str(wildcards.sample)]))
+    # getting some model stats out 
+    model_stats = np.array([ls_model.n_snps, ls_model.n_samples])
+    np.savez_compressed(output.mle_hap_copying_res, 
+                        hap_panel=ls_model.haps, 
+                        query_hap=test_hap, 
+                        positions=ls_model.positions, 
+                        raw_panel=raw_panel, 
+                        raw_bppos=raw_bppos, 
+                        raw_cmpos=raw_cmpos, 
+                        raw_query_hap=raw_testhap, 
+                        jump_rates=scales, 
+                        logll=-neg_log_lls, 
+                        mle_params=cur_params, 
+                        se_params=se_params, 
+                        scale_inf=scale_inf_res['x'], 
+                        model_stats=model_stats,
+                        panel=str(wildcards.panel),
+                        sampleID=str(wildcards.sample))
 
 
 rule gen_all_hap_copying_real1kg_panel:
   input:
-     expand(config['tmpdir'] + 'hap_copying/chrX_male_analysis/mle_est_real_1kg/chrX_filt.panel_{panel}.sample_{sample}.recmap_{rec}.listephens_hmm.npz', rec='deCODE', panel=['ceu', 'eur', 'fullkg'], sample=ancient_samples['indivID'].values[0])
+     expand(config['tmpdir'] + 'hap_copying/chrX_male_analysis/mle_est_real_1kg/chrX_filt.panel_{panel}.sample_{sample}.recmap_{rec}.listephens_hmm.npz', rec='deCODE', panel=['ceu', 'eur', 'fullkg'], sample=ancient_samples['indivID'].values)
 
 
 # TODO : final rule to full generate this dataset ...
-# rule collapse_mle_hapcopying_results:
-#   input:
-#     expand('data/hap_copying/chrX_male_analysis/mle_est_real_1kg/chrX_filt.panel_{{panel}}.sample_{sample}.recmap_{rec}.listephens_hmm.npz', rec='deCODE', sample=ancient_samples['indivID'].values)
-#   output:
-#     'data/hap_copying/chrX_male_analysis/mle_est_real_1kg/chrX_filt.panel_{panel}.total.ls_stats.csv'
-#   run:
+rule collapse_mle_hapcopying_results:
+  input:
+    files = rules.gen_all_hap_copying_real1kg_panel.input
+  output:
+    'results/hap_copying/chrX_male_analysis/mle_est_real_1kg/chrX_filt.total.ls_stats.csv'
+  run:
+    tot_rows_df = []
+    for f in tqdm(input.files):
+      # Load in the current data frame  
+      cur_df = np.load(f)
+      # Keeping the fields that we want to keep around
+      scales=cur_df['jump_rates'] 
+      logll = cur_df['logll']
+      scale_marginal = cur_df['scale_inf']
+      mle_params_jt = cur_df['mle_params']
+      se_params_jt = cur_df['se_params']
+      model_stats = cur_df['model_stats']
+      panel_ID = cur_df['panel']
+      sample_ID = cur_df['sampleID']
+      
+      # calculate the se in the marginal scale using the spline operation
+      se_spline = calc_se_spline(scales, logll, mle_scale=scale_marginal)
+      cur_row = [sample_ID, panel_ID, scale_marginal, se_spline, mle_params_jt[0], se_params_jt[0], mle_params_jt[1], se_params_jt[1], model_stats[0], model_stats[1]]
+      tot_rows_df.append(cur_row)
+    #Creating a final dataframe here ... 
+    final_df = pd.DataFrame(tot_rows_df, columns=['indivID','panelID','scale_marginal','se_marginal','scale_jt','se_scale_jt','eps_jt', 'se_eps_jt','nsnps','nref_haps'])
+    # join the data frame
+#     complete_df = final_df.join(ancient_samples, on='indivID')
+    final_df.to_csv(str(output), index=False)
+
+
+
+
+
 
 # rule collapse_all:

@@ -49,7 +49,22 @@ def ascertain_variants(hap_panel, pos, maf=0.05):
     asc_pos = pos[idx]
     return(asc_panel, asc_pos, idx)
 
-
+def calc_se_finite_diff(f, mle_x, eps=1e-1):
+    """f is the loglikelihood function."""
+    xs = np.array([mle_x-2*eps, mle_x-eps, mle_x, mle_x+eps, mle_x+2*eps])
+    ys = np.array([f(mle_x-2*eps),f(mle_x-eps), f(mle_x), f(mle_x + eps), f(mle_x+2*eps)])
+    dy=np.diff(ys,1)
+    dx=np.diff(xs,1)
+    yfirst=dy/dx
+    xfirst=0.5*(xs[:-1]+xs[1:])
+    dyfirst=np.diff(yfirst,1)
+    dxfirst=np.diff(xfirst,1)
+    ysecond=dyfirst/dxfirst
+    se = 1./np.sqrt(-ysecond[1])
+    return(ysecond, se)
+  
+  
+  
 ###### --------- Simulations ----------- ######
 
 rule sim_demography_single_ancients:
@@ -229,8 +244,11 @@ rule infer_scale_serial_all_ascertained:
     neg_log_lls_brack = (0, neg_log_lls[min_idx])
     print(ta_test, scales_bracket, neg_log_lls_brack)
     mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Brent', bracket=scales_bracket, tol=1e-3)
+    # Calculate the marginal standard error
+    f = lambda x : -cur_hmm._negative_logll(anc_asc_hap, scale=x, eps=1e-2)
+    _, se_finite_diff = calc_se_finite_diff(f, mle_scale.x)
     # Estimating both error and scale parameters jointly
-    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[1e3, 1e-3], bounds=[(1e1,1e5), (1e-6,0.5)], tol=1e-3)
+    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[mle_scale.x, 1e-3], bounds=[(1e1,1e5), (1e-6,0.5)], tol=1e-3)
     cur_params = np.array([np.nan, np.nan])
     se_params = np.array([np.nan, np.nan])
     if mle_params['success']:
@@ -244,6 +262,7 @@ rule infer_scale_serial_all_ascertained:
              scales=scales,
              loglls=-neg_log_lls,
              scale=mle_scale['x'],
+             se_scale_finite_diff=se_finite_diff,
              params=cur_params,
              se_params=se_params,
              model_params=model_params,
@@ -261,6 +280,7 @@ rule calc_infer_scales_asc_all_figures:
     expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialBottleneckInstant7', 'SerialBottleneckInstant8', 'SerialBottleneckInstant9'], ta=500, interval=10, mod_n=100, n_anc=1, length=40, Ne=1000000, seed=np.arange(1,5), asc=[1,5], ta_samp=np.arange(20,501,20)),
 #     expand('data/hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SimpleGrowth1', 'SimpleGrowth2', 'SimpleGrowth3', 'SimpleGrowth4'], ta=400, interval=5, mod_n=100, n_anc=1, length=40, Ne=1000000, rep=np.arange(5), asc=5, ta_samp=np.arange(5,401,5))
 
+# NOTE : this is starting to generate some stranger results than we might want for the more extreme cases ... 
 rule concatenate_hap_copying_results:
   input:
     files = rules.calc_infer_scales_asc_all_figures.input
@@ -276,6 +296,7 @@ rule concatenate_hap_copying_results:
       asc = cur_df['asc']
       N = cur_df['Ne']
       scale = cur_df['scale']
+      se_scale_finite_diff = cur_df['se_scale_finite_diff']
       params = cur_df['params']
       se_params = cur_df['se_params']
       model_params = cur_df['model_params']
@@ -285,9 +306,9 @@ rule concatenate_hap_copying_results:
       logll_spl = UnivariateSpline(scales, loglls, s=0, k=4)
       logll_deriv = logll_spl.derivative(n=2)
       se_marginal = 1./np.sqrt(-logll_deriv(scale))
-      cur_row = [scenario, N, scale, se_marginal, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2], asc, seed]
+      cur_row = [scenario, N, scale, se_marginal, se_scale_finite_diff, params[0],params[1], se_params[0],se_params[1], model_params[0], model_params[1], model_params[2], asc, seed]
       tot_df_rows.append(cur_row)
-    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal','se_scale_marginal', 'scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta','min_maf','seed'])
+    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','Ne', 'scale_marginal','se_scale_marginal','se_scale_marginal_fd', 'scale_jt', 'eps_jt','se_scale_jt', 'se_eps_jt','n_panel','n_snps','ta','min_maf','seed'])
     # Concatenate to create a new dataframe
     final_df.to_csv(str(output), index=False, header=final_df.columns)
 
@@ -406,7 +427,7 @@ rule infer_scale_serial_ascertained_ceu_sims:
       i += 1
     # Estimating just the scale
     start_scale = test_scales[np.argmin(neg_log_lls)]
-    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Brent', bracket=(0, start_scale + 1e2), tol=1e-3)
+    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Brent', bracket=(0, start_scale + 1e2), tol=1e-3)    
     # Estimating both error and scale parameters jointly
     mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[1e2, 1e-4], bounds=[(1e1,1e7), (1e-6,1e-1)], tol=1e-3)
     cur_params = np.array([np.nan, np.nan])
