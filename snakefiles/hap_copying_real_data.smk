@@ -98,8 +98,8 @@ def calc_se_spline(scales, loglls, mle_scale):
     logll_spl = UnivariateSpline(scales, loglls, s=0, k=4)
     logll_deriv2 = logll_spl.derivative(n=2)
     se = se = 1./np.sqrt(-logll_deriv2(mle_scale))
-    return(se)  
-  
+    return(se)
+
 def calc_se_finite_diff(f, mle_x, eps=1e-1):
     """f is the loglikelihood function."""
     xs = np.array([mle_x-2*eps, mle_x-eps, mle_x, mle_x+eps, mle_x+2*eps])
@@ -112,11 +112,11 @@ def calc_se_finite_diff(f, mle_x, eps=1e-1):
     dxfirst=np.diff(xfirst,1)
     ysecond=dyfirst/dxfirst
     se = 1./np.sqrt(-ysecond[1])
-    return(ysecond, se)  
+    return(ysecond, se)
 
 
-  
-# TODO : what should be done 
+
+# TODO : what should be done
 rule estimate_jump_rate_sample_real_1kg:
   """
     For a given sample and individuals in a reference panel
@@ -156,7 +156,7 @@ rule estimate_jump_rate_sample_real_1kg:
       if mle_params['success']:
         cur_params = mle_params['x']
         se_params = np.array([np.sqrt(mle_params.hess_inv.todense()[0,0]), np.sqrt(mle_params.hess_inv.todense()[1,1])])
-      # getting some model stats out 
+      # getting some model stats out
       model_stats = np.array([ls_model.n_snps, ls_model.n_samples])
       hap_panel = ls_model.haps
       pos = ls_model.positions
@@ -170,22 +170,22 @@ rule estimate_jump_rate_sample_real_1kg:
       hap_panel = np.nan
       test_hap = np.nan
       pos = np.nan
-      raw_panel=np.nan 
-      raw_bppos=np.nan 
-      raw_cmpos=np.nan 
+      raw_panel=np.nan
+      raw_bppos=np.nan
+      raw_cmpos=np.nan
       raw_testhap=np.nan
-    np.savez_compressed(output.mle_hap_copying_res, 
-                        hap_panel=hap_panel, 
-                        query_hap=test_hap, 
-                        positions=pos, 
-                        raw_panel=raw_panel, 
-                        raw_bppos=raw_bppos, 
-                        raw_cmpos=raw_cmpos, 
-                        raw_query_hap=raw_testhap, 
-                        jump_rates=scales, 
-                        logll=-neg_log_lls, 
-                        mle_params=cur_params, 
-                        se_params=se_params, 
+    np.savez_compressed(output.mle_hap_copying_res,
+                        hap_panel=hap_panel,
+                        query_hap=test_hap,
+                        positions=pos,
+                        raw_panel=raw_panel,
+                        raw_bppos=raw_bppos,
+                        raw_cmpos=raw_cmpos,
+                        raw_query_hap=raw_testhap,
+                        jump_rates=scales,
+                        logll=-neg_log_lls,
+                        mle_params=cur_params,
+                        se_params=se_params,
                         scale_inf=scale_inf_res['x'],
                         se_scale_finite_diff=se_finite_diff,
                         model_stats=model_stats,
@@ -207,10 +207,10 @@ rule collapse_mle_hapcopying_results:
   run:
     tot_rows_df = []
     for f in tqdm(input.files):
-      # Load in the current data frame  
+      # Load in the current data frame
       cur_df = np.load(f)
       # Keeping the fields that we want to keep around
-      scales=cur_df['jump_rates'] 
+      scales=cur_df['jump_rates']
       logll = cur_df['logll']
       scale_marginal = cur_df['scale_inf']
       se_scale_finite_diff= cur_df['se_scale_finite_diff']
@@ -219,11 +219,11 @@ rule collapse_mle_hapcopying_results:
       model_stats = cur_df['model_stats']
       panel_ID = cur_df['panel']
       sample_ID = cur_df['sampleID']
-      # calculate the se in the marginal scale using the spline operation as well... 
+      # calculate the se in the marginal scale using the spline operation as well...
       se_spline = calc_se_spline(scales, logll, mle_scale=scale_marginal)
       cur_row = [sample_ID, panel_ID, scale_marginal, se_spline, se_scale_finite_diff, mle_params_jt[0], se_params_jt[0], mle_params_jt[1], se_params_jt[1], model_stats[0], model_stats[1]]
       tot_rows_df.append(cur_row)
-    #Creating a final dataframe here ... 
+    #Creating a final dataframe here ...
     final_df = pd.DataFrame(tot_rows_df, columns=['indivID','panelID','scale_marginal','se_marginal','se_scale_marginal_fd','scale_jt','se_scale_jt','eps_jt', 'se_eps_jt','nsnps','nref_haps'])
     # join the data frame
     final_df.to_csv(str(output), index=False)

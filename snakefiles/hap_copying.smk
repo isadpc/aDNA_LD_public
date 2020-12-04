@@ -62,9 +62,9 @@ def calc_se_finite_diff(f, mle_x, eps=1e-1):
     ysecond=dyfirst/dxfirst
     se = 1./np.sqrt(-ysecond[1])
     return(ysecond, se)
-  
-  
-  
+
+
+
 ###### --------- Simulations ----------- ######
 
 rule sim_demography_single_ancients:
@@ -280,7 +280,7 @@ rule calc_infer_scales_asc_all_figures:
     expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialBottleneckInstant7', 'SerialBottleneckInstant8', 'SerialBottleneckInstant9'], ta=500, interval=10, mod_n=100, n_anc=1, length=40, Ne=1000000, seed=np.arange(1,5), asc=[1,5], ta_samp=np.arange(20,501,20)),
 #     expand('data/hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SimpleGrowth1', 'SimpleGrowth2', 'SimpleGrowth3', 'SimpleGrowth4'], ta=400, interval=5, mod_n=100, n_anc=1, length=40, Ne=1000000, rep=np.arange(5), asc=5, ta_samp=np.arange(5,401,5))
 
-# NOTE : this is starting to generate some stranger results than we might want for the more extreme cases ... 
+# NOTE : this is starting to generate some stranger results than we might want for the more extreme cases ...
 rule concatenate_hap_copying_results:
   input:
     files = rules.calc_infer_scales_asc_all_figures.input
@@ -427,7 +427,7 @@ rule infer_scale_serial_ascertained_ceu_sims:
       i += 1
     # Estimating just the scale
     start_scale = test_scales[np.argmin(neg_log_lls)]
-    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Brent', bracket=(0, start_scale + 1e2), tol=1e-3)    
+    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Brent', bracket=(0, start_scale + 1e2), tol=1e-3)
     # Estimating both error and scale parameters jointly
     mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[1e2, 1e-4], bounds=[(1e1,1e7), (1e-6,1e-1)], tol=1e-3)
     cur_params = np.array([np.nan, np.nan])
