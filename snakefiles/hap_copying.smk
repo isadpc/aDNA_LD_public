@@ -381,8 +381,6 @@ rule create_hap_panel_1kg_ceu_real_chrom:
                         scenario=scenario,
                         seed=seed)
 
-
-# NOTE : something is slightly off here ...
 rule infer_scale_serial_ascertained_ceu_sims:
   """
     Infer scale parameter using a naive Li-Stephens Model
@@ -426,10 +424,10 @@ rule infer_scale_serial_ascertained_ceu_sims:
       neg_log_lls[i] = cur_neg_logl
       i += 1
     # Estimating just the scale
-    start_scale = test_scales[np.argmin(neg_log_lls)]
-    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Brent', bracket=(0, start_scale + 1e2), tol=1e-3)    
+    start_scale = scales[np.argmin(neg_log_lls)]
+    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Brent', bracket=(1., start_scale + 1e1), tol=1e-3)    
     # Estimating both error and scale parameters jointly
-    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[1e2, 1e-4], bounds=[(1e1,1e7), (1e-6,1e-1)], tol=1e-3)
+    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[1e2, 1e-4], bounds=[(mle_scale.x, 1e7), (1e-6,1e-1)], tol=1e-3)
     cur_params = np.array([np.nan, np.nan])
     se_params = np.array([np.nan, np.nan])
     if mle_params['success']:
@@ -457,7 +455,7 @@ times_gen = np.unique(times_gen)
 
 rule ceu_infer_scale_real_chrom:
   input:
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_deCODE/mle_scale_{mod_n}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'IBDNeUK10K'], mod_n=49, Ne=10000, seed=42, asc=[10], ta_samp=10)
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_deCODE/mle_scale_{mod_n}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'IBDNeUK10K'], mod_n=49, Ne=10000, seed=42, asc=[5], ta_samp=times_gen)
 
 
 rule concatenate_hap_copying_results_chrX_sim:
