@@ -118,9 +118,9 @@ rule run_two_locus_sims_scenarios:
 
 rule run_sims_all:
   input:
-    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne{Ne}.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['SerialConstant'], n0=1, na=1, ta=np.arange(20, 501, 20), seed=42, rec_rate=4, Ne=[5000, 10000, 20000], nreps=50000),
-    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne10000.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['Tennessen', 'IBDNeUK10K'], n0=1, na=1, ta=np.arange(20, 501, 20), seed=42, rec_rate=4, nreps=50000),
-    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne{Ne}.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['InstantGrowth7', 'InstantGrowth8', 'InstantGrowth9'], n0=1, na=1, ta=np.arange(20, 501, 20), seed=42, rec_rate=4, Ne=[1000000], nreps=50000)
+    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne{Ne}.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['SerialConstant'], n0=1, na=1, ta=np.arange(0, 501, 20), seed=42, rec_rate=4, Ne=[5000, 10000, 20000], nreps=50000),
+    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne10000.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['Tennessen', 'IBDNeUK10K'], n0=1, na=1, ta=np.arange(0, 501, 20), seed=42, rec_rate=4, nreps=50000),
+    expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne{Ne}.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['InstantGrowth7', 'InstantGrowth8', 'InstantGrowth9'], n0=1, na=1, ta=np.arange(0, 501, 20), seed=42, rec_rate=4, Ne=[1000000], nreps=50000)
 
 
 rule combine_branch_length_est:
