@@ -80,10 +80,13 @@ rule monte_carlo_sasb_sims:
                         se_r=se_r)
 
 
+
 # Landing rule for generating the simulations ...
 rule estimate_monte_carlo_sA_sB_sims:
   input:
-    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_1_1_{ta}_20_Ne_10000_{full_seed}.monte_carlo_L{L}.N{N}.npz', scenario=['SerialConstant','TennessenEuropean'], ta=[0,10000], L=1000, N=200, full_seed=42)
+    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_1_1_{ta}_20_Ne_10000_{full_seed}.monte_carlo_L{L}.N{N}.npz', scenario=['SerialConstant','TennessenEuropean'], ta=[0,1000, 10000], L=1000, N=200, full_seed=42),
+    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_1_1_{ta}_20_Ne_6958_{full_seed}.monte_carlo_L{L}.N{N}.npz', scenario=['SerialConstant'], ta=[0,1000, 10000], L=1000, N=200, full_seed=24)
+
 
 
 rule monte_carlo_sA_sB_results:
