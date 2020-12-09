@@ -9204,15 +9204,15 @@ label {
 }
 /* Flexible box model classes */
 /* Taken from Alex Russell http://infrequently.org/2009/08/css-3-progress/ */
-/* This file is a compatability layer.  It allows the usage of flexible box 
+/* This file is a compatability layer.  It allows the usage of flexible box
 model layouts accross multiple browsers, including older browsers.  The newest,
 universal implementation of the flexible box model is used when available (see
-`Modern browsers` comments below).  Browsers that are known to implement this 
+`Modern browsers` comments below).  Browsers that are known to implement this
 new spec completely include:
 
     Firefox 28.0+
     Chrome 29.0+
-    Internet Explorer 11+ 
+    Internet Explorer 11+
     Opera 17.0+
 
 Browsers not listed, including Safari, are supported via the styling under the
@@ -12594,7 +12594,7 @@ div#pager .ui-resizable-handle {
   background: #f7f7f7;
   border-top: 1px solid #cfcfcf;
   border-bottom: 1px solid #cfcfcf;
-  /* This injects handle bars (a short, wide = symbol) for 
+  /* This injects handle bars (a short, wide = symbol) for
         the resize handle. */
 }
 div#pager .ui-resizable-handle::after {
@@ -13072,17 +13072,17 @@ div#notebook {
                 },
                 displayAlign: 'center',
                 CommonHTML: {
-                    linebreaks: { 
-                    automatic: true 
+                    linebreaks: {
+                    automatic: true
                     }
                 },
                 "HTML-CSS": {
-                    linebreaks: { 
-                    automatic: true 
+                    linebreaks: {
+                    automatic: true
                     }
                 }
             });
-        
+
             MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
         }
     }
@@ -13099,7 +13099,7 @@ div#notebook {
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Exploring the covariance in segregating sites</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span> 
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">matplotlib.gridspec</span> <span class="k">as</span> <span class="nn">gridspec</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
@@ -13193,7 +13193,7 @@ div#notebook {
 
 
 <span class="c1"># Bottleneck simulations </span>
-<span class="n">bott_sim</span> <span class="o">=</span> <span class="n">SerialBottleneck</span><span class="p">(</span><span class="n">Ne</span><span class="o">=</span><span class="mf">1e6</span><span class="p">,</span> <span class="n">mod_n</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">t_anc</span><span class="o">=</span><span class="n">t_anc</span><span class="p">,</span> <span class="n">n_anc</span><span class="o">=</span><span class="n">n_anc</span><span class="p">,</span> 
+<span class="n">bott_sim</span> <span class="o">=</span> <span class="n">SerialBottleneck</span><span class="p">(</span><span class="n">Ne</span><span class="o">=</span><span class="mf">1e6</span><span class="p">,</span> <span class="n">mod_n</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">t_anc</span><span class="o">=</span><span class="n">t_anc</span><span class="p">,</span> <span class="n">n_anc</span><span class="o">=</span><span class="n">n_anc</span><span class="p">,</span>
                             <span class="n">bottle_start</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">bottle_duration</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mf">5e5</span><span class="p">),</span> <span class="n">bottle_mag</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
 </pre></div>
 
@@ -13270,7 +13270,7 @@ div#notebook {
     <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">t</span><span class="p">,</span><span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">)</span>
     <span class="n">i</span> <span class="o">+=</span> <span class="mf">0.5</span>
 <span class="c1"># ax[0,0].set_xlim(0,1.1)</span>
-    
+
 <span class="n">debox</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]);</span> <span class="n">debox</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
 <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([]);</span> <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([]);</span>
 <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([]);</span> <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([]);</span>
@@ -13279,14 +13279,14 @@ div#notebook {
 <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;Conditioning on $T_</span><span class="si">{MRCA}</span><span class="s1">$&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
 
 <span class="c1"># Actual Simulation Results</span>
-<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">test_serial_const_df</span><span class="p">[</span><span class="s1">&#39;t_a&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> 
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">test_serial_const_df</span><span class="p">[</span><span class="s1">&#39;t_a&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
                <span class="n">test_serial_const_df</span><span class="p">[</span><span class="s1">&#39;t_star&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
-               <span class="n">yerr</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">test_serial_const_df</span><span class="p">[</span><span class="s1">&#39;t_star&#39;</span><span class="p">][</span><span class="s1">&#39;sem&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> 
+               <span class="n">yerr</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">test_serial_const_df</span><span class="p">[</span><span class="s1">&#39;t_star&#39;</span><span class="p">][</span><span class="s1">&#39;sem&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
                  <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">)</span>
 
 <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">test_serial_bott_df</span><span class="p">[</span><span class="s1">&#39;t_a&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
                <span class="n">test_serial_bott_df</span><span class="p">[</span><span class="s1">&#39;t_star&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
-               <span class="n">yerr</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">test_serial_const_df</span><span class="p">[</span><span class="s1">&#39;t_star&#39;</span><span class="p">][</span><span class="s1">&#39;sem&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> 
+               <span class="n">yerr</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">test_serial_const_df</span><span class="p">[</span><span class="s1">&#39;t_star&#39;</span><span class="p">][</span><span class="s1">&#39;sem&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
                  <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">)</span>
 
 
@@ -13297,7 +13297,7 @@ div#notebook {
 <span class="n">fig</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mf">0.375</span><span class="p">,</span> <span class="n">y</span><span class="o">=-</span><span class="mf">0.025</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="s1">&#39;Sample age (generations)&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
 
 
-<span class="n">label_multipanel</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,:],</span> <span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">,</span><span class="s1">&#39;B&#39;</span><span class="p">],</span> <span class="n">yoff</span><span class="o">=</span><span class="mf">1.2</span><span class="p">,</span> 
+<span class="n">label_multipanel</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">,:],</span> <span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">,</span><span class="s1">&#39;B&#39;</span><span class="p">],</span> <span class="n">yoff</span><span class="o">=</span><span class="mf">1.2</span><span class="p">,</span>
                  <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="s1">&#39;bold&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
@@ -13338,7 +13338,7 @@ div#notebook {
 
 
 
- 
+
 
 
 </html>
