@@ -360,8 +360,9 @@ test_yri_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'YRI']['sample'].values[:3]
 test_chb_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'CHB']['sample'].values[:3]
 test_ceu_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'CEU']['sample'].values
 test_gih_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'GIH']['sample'].values[:3]
-test_indivs_1kg = np.hstack([test_yri_1kg, test_chb_1kg, test_ceu_1kg, test_gih_1kg, np.array('NA12830')])
+test_indivs_1kg = np.hstack([test_yri_1kg, test_chb_1kg, test_ceu_1kg, test_gih_1kg])
 
+# np.array('NA12830')
 
 rule monte_carlo_real_data_1kg_samples:
   input:
@@ -378,7 +379,7 @@ rule concatenate_tot_corr_piA_piB:
     for a in ['LBK','UstIshim']:
       # Getting only files with that filename on them
       valid_files = [x for x in input.files if a in x]
-      for x in tqdm(test_ceu_1kg):
+      for x in tqdm(test_indivs_1kg):
         print('Corr(pi_B, pi_B) with: %s' % x)
         fname = [y for y in valid_files if x in y]
         assert(len(fname) >= 1)
