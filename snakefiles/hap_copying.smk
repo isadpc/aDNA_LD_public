@@ -117,7 +117,7 @@ rule sim_demography_multi_ancients:
   output:
     treeseq=config['tmpdir'] + 'full_sim_all/{scenario}/generations_{ta,\d+}_{interval,\d+}/serial_coal_{mod_n, \d+}_{n_anc, \d+}_{length, \d+}_Ne{Ne,\d+}_{seed,\d+}.treeseq.gz',
   wildcard_constraints:
-    scenario = '(SerialConstant|SerialBottleneck|SerialBottleneckLate|TennessenEuropean|SerialBottleneckInstant[0-9]*|IBDNeUK10K|SimpleGrowth[0-9]*)'
+    scenario = '(SerialConstant|SerialBottleneck|SerialBottleneckLate|TennessenEuropean|SerialBottleneckInstant[0-9]*|SerialMigration[0-9]*|IBDNeUK10K|SimpleGrowth[0-9]*)'
   run:
     # Setup the parameters (length in megabases)
     length=np.float32(wildcards.length) * 1e6
@@ -176,6 +176,14 @@ rule sim_demography_multi_ancients:
     elif scenario == 'SimpleGrowth4':
       cur_sim = SerialGrowthSimple(r=2.5e-2)
       cur_sim._add_samples(n_mod=mod_n, n_anc=n_anc, t_anc=t_anc)
+    elif scenario == 'SerialMigration1':
+      cur_sim = SerialMigration(Ne=Ne, mod_n=mod_n, t_anc=t_anc, n_anc=n_anc, mig_rate=1e-1)
+    elif scenario == 'SerialMigration2':
+      cur_sim = SerialMigration(Ne=Ne, mod_n=mod_n, t_anc=t_anc, n_anc=n_anc, mig_rate=1e-2)
+    elif scenario == 'SerialMigration3':
+      cur_sim = SerialMigration(Ne=Ne, mod_n=mod_n, t_anc=t_anc, n_anc=n_anc, mig_rate=1e-3)
+    elif scenario == 'SerialMigration4':
+      cur_sim = SerialMigration(Ne=Ne, mod_n=mod_n, t_anc=t_anc, n_anc=n_anc, mig_rate=1e-4)
     else:
       raise ValueError('Improper value input for this simulation!')
     # Conducting the actual simulation ...
@@ -211,7 +219,7 @@ rule infer_scale_serial_all_ascertained:
   input:
     hap_panel = rules.create_hap_panel_all.output.hap_panel
   wildcard_constraints:
-    scenario = '(SerialConstant|SerialBottleneck|SerialBottleneckLate|TennessenEuropean|SerialBottleneckInstant[0-9]*|SerialMigration_[0-9]*|IBDNeUK10K|SimpleGrowth[0-9]*)'
+    scenario = '(SerialConstant|SerialBottleneck|SerialBottleneckLate|TennessenEuropean|SerialBottleneckInstant[0-9]*|SerialMigration[0-9]*|IBDNeUK10K|SimpleGrowth[0-9]*)'
   output:
     mle_hap_est = config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n, \d+}_{n_anc, \d+}_{length,\d+}_Ne{Ne,\d+}_{seed,\d+}.asc_{asc, \d+}.ta_{ta_samp, \d+}.scale.npz'
   run:
@@ -278,6 +286,7 @@ rule calc_infer_scales_asc_all_figures:
     expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialConstant'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[20000, 10000,5000], seed=np.arange(1,5), asc=[1,5], ta_samp=np.arange(20,501,20)),
     expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['IBDNeUK10K', 'TennessenEuropean'], ta=1000, interval=10, mod_n=100, n_anc=1, length=40, Ne=[10000], seed=np.arange(1,5), asc=[1,5], ta_samp=np.arange(20,501,20)),
     expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialBottleneckInstant7', 'SerialBottleneckInstant8', 'SerialBottleneckInstant9'], ta=500, interval=10, mod_n=100, n_anc=1, length=40, Ne=1000000, seed=np.arange(1,5), asc=[1,5], ta_samp=np.arange(20,501,20)),
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SerialMigration1', 'SerialMigration2', 'SerialMigration3', 'SerialMigration4'], ta=500, interval=10, mod_n=100, n_anc=1, length=40, Ne=10000, seed=np.arange(1,5), asc=[1,5], ta_samp=np.arange(20,501,20))
 #     expand('data/hap_copying/mle_results_all/{scenario}/generations_{ta}_{interval}/mle_scale_{mod_n}_{n_anc}_{length}_Ne{Ne}_{rep}.asc_{asc}.ta_{ta_samp}.scale.npz', scenario=['SimpleGrowth1', 'SimpleGrowth2', 'SimpleGrowth3', 'SimpleGrowth4'], ta=400, interval=5, mod_n=100, n_anc=1, length=40, Ne=1000000, rep=np.arange(5), asc=5, ta_samp=np.arange(5,401,5))
 
 # NOTE : this is starting to generate some stranger results than we might want for the more extreme cases ...
