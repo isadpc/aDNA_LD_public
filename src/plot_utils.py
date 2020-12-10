@@ -20,6 +20,12 @@ def debox(ax):
     ax.spines["top"].set_visible(False)
 
 
+def debox_all(axs):
+    """Iterate the deboxing across all of the axes."""
+    for a in axs:
+        debox(a)
+
+
 def colorbar(mappable, **kwargs):
     """Create a colorbar with more gusto."""
     last_axes = plt.gca()
