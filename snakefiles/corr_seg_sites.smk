@@ -71,6 +71,7 @@ rule monte_carlo_sasb_sims:
     np.savez_compressed(output.corr_SASB,
                         scenario=wildcards.scenario,
                         seed=np.int32(wildcards.full_seed),
+                        Ne = np.int32(wildcards.Ne),
                         ta = np.int32(wildcards.ta),
                         L = np.int32(wildcards.L),
                         N = np.int32(wildcards.N),
@@ -101,6 +102,7 @@ rule monte_carlo_sA_sB_results:
       # Loading the specific entries
       scenario = sim['scenario']
       seed = sim['seed']
+      Ne = sim['Ne']
       N = sim['N']
       ta = sim['ta']
       L = sim['L']
@@ -112,11 +114,11 @@ rule monte_carlo_sA_sB_results:
       assert(rec_rate_mean.size == rec_rate_se.size)
       assert(rec_rate_mean.size == corr_s1_s2.size)
       for i in range(rec_rate_mean.size):
-        cur_row = [scenario, N, ta, L, rec_rate_mean[i], rec_rate_se[i], corr_s1_s2[i], se_r[i], seed]
+        cur_row = [scenario, N, ta, L, rec_rate_mean[i], rec_rate_se[i], corr_s1_s2[i], se_r[i], seed, Ne]
         tot_df.append(cur_row)
 
     # generate the full output
-    final_df = pd.DataFrame(tot_df, columns=['scenario','N','ta','L','rec_rate_mean','rec_rate_se','corr_s1_s2','se_corr','seed'])
+    final_df = pd.DataFrame(tot_df, columns=['scenario','N','ta','L','rec_rate_mean','rec_rate_se','corr_s1_s2','se_corr','seed', 'Ne'])
     final_df = final_df.dropna()
     final_df.to_csv(str(output), index=False, header=final_df.columns)
 
