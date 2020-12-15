@@ -3,7 +3,7 @@
 <head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>index</title><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>gen_corrbl_tables</title><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 
 <style type="text/css">
   pre { line-height: 125%; margin: 0; }
@@ -9204,15 +9204,15 @@ label {
 }
 /* Flexible box model classes */
 /* Taken from Alex Russell http://infrequently.org/2009/08/css-3-progress/ */
-/* This file is a compatability layer.  It allows the usage of flexible box
+/* This file is a compatability layer.  It allows the usage of flexible box 
 model layouts accross multiple browsers, including older browsers.  The newest,
 universal implementation of the flexible box model is used when available (see
-`Modern browsers` comments below).  Browsers that are known to implement this
+`Modern browsers` comments below).  Browsers that are known to implement this 
 new spec completely include:
 
     Firefox 28.0+
     Chrome 29.0+
-    Internet Explorer 11+
+    Internet Explorer 11+ 
     Opera 17.0+
 
 Browsers not listed, including Safari, are supported via the styling under the
@@ -12594,7 +12594,7 @@ div#pager .ui-resizable-handle {
   background: #f7f7f7;
   border-top: 1px solid #cfcfcf;
   border-bottom: 1px solid #cfcfcf;
-  /* This injects handle bars (a short, wide = symbol) for
+  /* This injects handle bars (a short, wide = symbol) for 
         the resize handle. */
 }
 div#pager .ui-resizable-handle::after {
@@ -13072,17 +13072,17 @@ div#notebook {
                 },
                 displayAlign: 'center',
                 CommonHTML: {
-                    linebreaks: {
-                    automatic: true
+                    linebreaks: { 
+                    automatic: true 
                     }
                 },
                 "HTML-CSS": {
-                    linebreaks: {
-                    automatic: true
+                    linebreaks: { 
+                    automatic: true 
                     }
                 }
             });
-
+        
             MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
         }
     }
@@ -13093,34 +13093,475 @@ div#notebook {
   <div tabindex="-1" id="notebook" class="border-box-sizing">
     <div class="container" id="notebook-container">
 
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span> 
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">pearsonr</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;../../src/&#39;</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">coal_cov</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">seg_sites_covar</span> <span class="kn">import</span> <span class="n">CorrSegSites</span>
+<span class="kn">from</span> <span class="nn">plot_utils</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;font.sans-serif&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Arial&quot;</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.facecolor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;w&quot;</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.autolayout&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1</span> <span class="kn">import</span> <span class="n">make_axes_locatable</span>
+<span class="kn">import</span> <span class="nn">matplotlib.ticker</span> <span class="k">as</span> <span class="nn">mticker</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="n">main_figdir</span> <span class="o">=</span> <span class="s1">&#39;../../plots/two_locus_stats/&#39;</span>
+<span class="n">supp_figdir</span> <span class="o">=</span> <span class="s1">&#39;../../plots/supp_figs/two_locus_stats/&#39;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">main_figdir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">supp_figdir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Table-of-Contents-for-analyses-in-&quot;Properties-of-Two-Locus-Genealogies-and-Linkage-Disequilibrium-in-Temporally-Structured-Samples&quot;">Table of Contents for analyses in "Properties of Two-Locus Genealogies and Linkage Disequilibrium in Temporally Structured Samples"<a class="anchor-link" href="#Table-of-Contents-for-analyses-in-&quot;Properties-of-Two-Locus-Genealogies-and-Linkage-Disequilibrium-in-Temporally-Structured-Samples&quot;">&#182;</a></h1><h2 id="by-Biddanda,-Steinruecken,-and-Novembre">by Biddanda, Steinruecken, and Novembre<a class="anchor-link" href="#by-Biddanda,-Steinruecken,-and-Novembre">&#182;</a></h2><ol>
-<li><p>Main Analyses</p>
-<ul>
-<li><a href="./main_analyses/two_locus_adna.html">Probability of uncoupling &amp; correlation of pairwise differences</a></li>
-<li><a href="./main_analyses/two_locus_demographic.html">Correlation in pairwise differences with time-stratified sampling</a></li>
-<li><a href="./main_analyses/corr_piA_piB_real_data.html">Correlation in pairwise differences in ancient WGS data</a></li>
-<li><a href="./main_analyses/sigma2d_time_strat.html">Calculation of $\sigma^2_d$ with time-stratified sampling</a></li>
-<li><a href="./main_analyses/demography_copying_rate.html">Haplotype copying jump-rates under varying demographies</a></li>
-<li><a href="./main_analyses/reich_1240k_analysis.html">Haplotype copying jump-rates estimated in 1240K ancient DNA data</a></li>
-</ul>
-</li>
-<li><p>Supplementary Analyses</p>
-<ul>
-<li><a href="./supp_analyses/two_locus_adna_divergence.html">The impact of population divergence</a></li>
-<li><a href="./supp_analyses/time_to_first_coal_anc_sample.html">Time to first coalescence for an ancient sample</a></li>
-<li><a href="./supp_analyses/ls_verify.html">Verifying Li-Stephens Jump Rate Inference</a></li>
-<li><a href="./supp_analyses/est_ta_Ne.html">Estimating $t_a$ and $N_e$ from $Corr(\pi_A,\pi_B)$</a></li>
-<li><a href="./supp_analyses/time_to_first_coal_anc_sample.html">Time to first coalescent for ancient sample with instant growth</a></li>
-<li><a href="./main_analyses/gen_corrbl_tables.html">The impact of growth and bottleneck strength</a></li>
-</ul>
-</li>
-</ol>
+<h3 id="Simulation-under-a-model-of-exponential-growth">Simulation under a model of exponential growth<a class="anchor-link" href="#Simulation-under-a-model-of-exponential-growth">&#182;</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># NOTE : growth always starts ~ 1000 Generations in the past ... </span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+
+<span class="n">tas</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">]</span>
+<span class="n">rs</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1e-3</span><span class="p">,</span> <span class="mf">1e-2</span><span class="p">,</span> <span class="mf">5e-2</span><span class="p">]</span>
+<span class="n">rec_rate</span> <span class="o">=</span> <span class="mf">1e-3</span>
+
+
+<span class="n">total_sims</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">tas</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rs</span><span class="p">:</span>
+        <span class="n">cur_sim</span> <span class="o">=</span> <span class="n">TwoLocusSerialGrowth</span><span class="p">(</span><span class="n">ta</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">reps</span><span class="o">=</span><span class="mi">50000</span><span class="p">,</span> <span class="n">rec_rate</span><span class="o">=</span><span class="n">rec_rate</span><span class="p">)</span>
+        <span class="n">cur_sim</span><span class="o">.</span><span class="n">_simulate</span><span class="p">()</span>
+        <span class="n">cur_sim</span><span class="o">.</span><span class="n">_two_locus_branch_length</span><span class="p">()</span>
+        <span class="c1"># Calculating the marginal variance and means</span>
+        <span class="n">mu_LA</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cur_sim</span><span class="o">.</span><span class="n">pair_branch_length</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">var_LA</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">cur_sim</span><span class="o">.</span><span class="n">pair_branch_length</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">cov_LALB</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="n">cur_sim</span><span class="o">.</span><span class="n">pair_branch_length</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">cur_sim</span><span class="o">.</span><span class="n">pair_branch_length</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">corr_LALB</span> <span class="o">=</span> <span class="n">pearsonr</span><span class="p">(</span><span class="n">cur_sim</span><span class="o">.</span><span class="n">pair_branch_length</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">cur_sim</span><span class="o">.</span><span class="n">pair_branch_length</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">total_sims</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">t</span><span class="p">,</span><span class="n">r</span><span class="p">,</span> <span class="n">mu_LA</span><span class="p">,</span> <span class="n">var_LA</span><span class="p">,</span> <span class="n">cov_LALB</span><span class="p">,</span> <span class="n">corr_LALB</span><span class="p">])</span>
+            
+<span class="n">total_sims</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">total_sims</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>100%|██████████| 3/3 [03:07&lt;00:00, 62.51s/it]
+</pre>
+</div>
+</div>
 
 </div>
 </div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">growth_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">total_sims</span><span class="p">)</span>
+<span class="n">growth_df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;$t_a$&#39;</span><span class="p">,</span> <span class="s1">&#39;$r$&#39;</span><span class="p">,</span><span class="s1">&#39;$\mathbb</span><span class="si">{E}</span><span class="s1">[L]$&#39;</span><span class="p">,</span><span class="s1">&#39;$Var(L)$&#39;</span><span class="p">,</span><span class="s1">&#39;$Cov(L_A,L_B)$&#39;</span><span class="p">,</span><span class="s1">&#39;$Corr(L_A, L_B)$&#39;</span><span class="p">]</span>
+<span class="n">growth_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;../../results/two_loci/growth_model.csv&#39;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">growth_df</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[7]:</div>
+
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>$t_a$</th>
+      <th>$r$</th>
+      <th>$\mathbb{E}[L]$</th>
+      <th>$Var(L)$</th>
+      <th>$Cov(L_A,L_B)$</th>
+      <th>$Corr(L_A, L_B)$</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.0</td>
+      <td>0.001</td>
+      <td>6072.365176</td>
+      <td>4.718227e+06</td>
+      <td>324213.443686</td>
+      <td>0.068411</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.0</td>
+      <td>0.010</td>
+      <td>1944.554757</td>
+      <td>6.568740e+04</td>
+      <td>8661.988521</td>
+      <td>0.132352</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.0</td>
+      <td>0.050</td>
+      <td>1253.039258</td>
+      <td>2.639417e+03</td>
+      <td>476.232940</td>
+      <td>0.179081</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>100.0</td>
+      <td>0.001</td>
+      <td>6004.463509</td>
+      <td>4.595287e+06</td>
+      <td>285275.715342</td>
+      <td>0.061896</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>100.0</td>
+      <td>0.010</td>
+      <td>1843.978938</td>
+      <td>6.512168e+04</td>
+      <td>8861.051083</td>
+      <td>0.135078</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>100.0</td>
+      <td>0.050</td>
+      <td>1153.138663</td>
+      <td>2.674536e+03</td>
+      <td>542.160411</td>
+      <td>0.203207</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>500.0</td>
+      <td>0.001</td>
+      <td>5686.825129</td>
+      <td>4.172511e+06</td>
+      <td>181323.300526</td>
+      <td>0.043535</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>500.0</td>
+      <td>0.010</td>
+      <td>1448.392250</td>
+      <td>5.945848e+04</td>
+      <td>11923.757751</td>
+      <td>0.201223</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>500.0</td>
+      <td>0.050</td>
+      <td>753.743537</td>
+      <td>2.556839e+03</td>
+      <td>905.724431</td>
+      <td>0.353543</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Simulation-under-a-bottleneck-model">Simulation under a bottleneck model<a class="anchor-link" href="#Simulation-under-a-bottleneck-model">&#182;</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+
+<span class="n">tas</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">]</span>
+<span class="n">rs</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1e-1</span><span class="p">,</span> <span class="mf">1e-2</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">]</span>
+<span class="n">rec_rate</span> <span class="o">=</span> <span class="mf">1e-3</span>
+
+<span class="n">total_sims_bot</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">tas</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rs</span><span class="p">:</span>
+        <span class="n">cur_sim</span> <span class="o">=</span> <span class="n">TwoLocusSerialBottleneck</span><span class="p">(</span><span class="n">Ne</span><span class="o">=</span><span class="mf">1e4</span><span class="p">,</span> <span class="n">ta</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">Tstart</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">Tend</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">Nbot</span><span class="o">=</span><span class="n">r</span><span class="o">*</span><span class="mf">1e4</span><span class="p">,</span> <span class="n">reps</span><span class="o">=</span><span class="mi">50000</span><span class="p">,</span> <span class="n">rec_rate</span><span class="o">=</span><span class="n">rec_rate</span><span class="p">)</span>
+        <span class="n">cur_sim</span><span class="o">.</span><span class="n">_simulate</span><span class="p">()</span>
+        <span class="n">cur_sim</span><span class="o">.</span><span class="n">_two_locus_branch_length</span><span class="p">()</span>
+        <span class="c1"># Calculating the marginal variance and means</span>
+        <span class="n">mu_LA</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cur_sim</span><span class="o">.</span><span class="n">pair_branch_length</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">var_LA</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">cur_sim</span><span class="o">.</span><span class="n">pair_branch_length</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">cov_LALB</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="n">cur_sim</span><span class="o">.</span><span class="n">pair_branch_length</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">cur_sim</span><span class="o">.</span><span class="n">pair_branch_length</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">corrLALB</span> <span class="o">=</span> <span class="n">pearsonr</span><span class="p">(</span><span class="n">cur_sim</span><span class="o">.</span><span class="n">pair_branch_length</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">cur_sim</span><span class="o">.</span><span class="n">pair_branch_length</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">total_sims_bot</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">t</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">mu_LA</span><span class="p">,</span> <span class="n">var_LA</span><span class="p">,</span> <span class="n">cov_LALB</span><span class="p">,</span> <span class="n">corrLALB</span><span class="p">])</span>
+        
+        
+<span class="n">total_sims_bot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">total_sims_bot</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>100%|██████████| 3/3 [02:50&lt;00:00, 56.92s/it]
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[9]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">bottleneck_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">total_sims_bot</span><span class="p">)</span>
+<span class="n">bottleneck_df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;$t_a$&#39;</span><span class="p">,</span> <span class="s1">&#39;$\phi$&#39;</span><span class="p">,</span><span class="s1">&#39;$\mathbb</span><span class="si">{E}</span><span class="s1">[L]$&#39;</span><span class="p">,</span><span class="s1">&#39;$Var(L)$&#39;</span><span class="p">,</span><span class="s1">&#39;$Cov(L_A,L_B)$&#39;</span><span class="p">,</span><span class="s1">&#39;$Corr(L_A,L_B)$&#39;</span><span class="p">]</span>
+<span class="n">bottleneck_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;../../results/two_loci/bottleneck.csv&#39;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">bottleneck_df</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[9]:</div>
+
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>$t_a$</th>
+      <th>$\phi$</th>
+      <th>$\mathbb{E}[L]$</th>
+      <th>$Var(L)$</th>
+      <th>$Cov(L_A,L_B)$</th>
+      <th>$Corr(L_A,L_B)$</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.0</td>
+      <td>0.100</td>
+      <td>32681.304391</td>
+      <td>1.532905e+09</td>
+      <td>1.051744e+08</td>
+      <td>0.067889</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.0</td>
+      <td>0.010</td>
+      <td>4629.003515</td>
+      <td>3.208360e+08</td>
+      <td>6.956581e+07</td>
+      <td>0.214770</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.0</td>
+      <td>0.001</td>
+      <td>139.823748</td>
+      <td>1.644905e+03</td>
+      <td>1.377611e+03</td>
+      <td>0.833835</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>100.0</td>
+      <td>0.100</td>
+      <td>33148.431260</td>
+      <td>1.522341e+09</td>
+      <td>1.250056e+08</td>
+      <td>0.081292</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>100.0</td>
+      <td>0.010</td>
+      <td>5703.571589</td>
+      <td>3.976571e+08</td>
+      <td>9.865059e+07</td>
+      <td>0.248445</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>100.0</td>
+      <td>0.001</td>
+      <td>140.047018</td>
+      <td>1.625994e+03</td>
+      <td>1.499267e+03</td>
+      <td>0.922482</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>500.0</td>
+      <td>0.100</td>
+      <td>40369.613058</td>
+      <td>1.576998e+09</td>
+      <td>1.506489e+07</td>
+      <td>0.009398</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>500.0</td>
+      <td>0.010</td>
+      <td>40695.222113</td>
+      <td>1.631697e+09</td>
+      <td>1.729507e+07</td>
+      <td>0.010763</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>500.0</td>
+      <td>0.001</td>
+      <td>40245.526643</td>
+      <td>1.580981e+09</td>
+      <td>1.438117e+07</td>
+      <td>0.009079</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span> 
+</pre></div>
+
+    </div>
+</div>
+</div>
+
 </div>
     </div>
   </div>
@@ -13129,7 +13570,7 @@ div#notebook {
 
 
 
-
+ 
 
 
 </html>
