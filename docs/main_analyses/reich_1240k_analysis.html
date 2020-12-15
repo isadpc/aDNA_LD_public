@@ -13106,6 +13106,9 @@ div#notebook {
 <span class="kn">import</span> <span class="nn">statsmodels.api</span> <span class="k">as</span> <span class="nn">sm</span>
 <span class="n">lowess</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">nonparametric</span><span class="o">.</span><span class="n">lowess</span>
 
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
+
 <span class="kn">import</span> <span class="nn">re</span>
 
 <span class="kn">import</span> <span class="nn">os</span>
@@ -13120,6 +13123,9 @@ div#notebook {
 <span class="kn">import</span> <span class="nn">cartopy.feature</span> <span class="k">as</span> <span class="nn">cfeature</span>
 <span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">linregress</span>
 <span class="kn">from</span> <span class="nn">geopy.distance</span> <span class="kn">import</span> <span class="n">geodesic</span>
+
+<span class="kn">from</span> <span class="nn">patsy</span> <span class="kn">import</span> <span class="n">dmatrices</span>
+<span class="kn">from</span> <span class="nn">statsmodels.api</span> <span class="kn">import</span> <span class="n">OLS</span>
 
 <span class="o">%</span><span class="k">load_ext</span> autoreload
 <span class="o">%</span><span class="k">autoreload</span> 2
@@ -13435,6 +13441,7 @@ div#notebook {
 <span class="n">pass_indivs</span> <span class="o">=</span> <span class="n">quality_control_panel_select</span><span class="p">(</span><span class="n">total_raw_stats_df</span><span class="p">,</span> <span class="n">panel</span><span class="o">=</span><span class="n">panel</span><span class="p">,</span> <span class="n">nsnps</span><span class="o">=</span><span class="n">nsnps</span><span class="p">);</span>
 <span class="c1"># NOTE: should have a way to filter duplicate samples (and only take the higher coverage sample ... )</span>
 <span class="n">pass_indivs</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">nsnps</span><span class="p">,</span> <span class="n">snps_per_kb</span><span class="p">,</span> <span class="n">snps_per_kb</span><span class="o">*</span><span class="mi">25</span><span class="p">,</span> <span class="n">pass_indivs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 </pre></div>
 
     </div>
@@ -13452,201 +13459,9 @@ div#notebook {
 
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>8000 0.05186580692349137 1.296645173087284
+8000 0.05186580692349137 1.296645173087284 798
 </pre>
 </div>
-</div>
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/Biddanda/.pyenv/versions/3.7.5/lib/python3.7/site-packages/ipykernel_launcher.py:12: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-  if sys.path[0] == &#39;&#39;:
-</pre>
-</div>
-</div>
-
-<div class="output_area">
-
-    <div class="prompt output_prompt">Out[5]:</div>
-
-
-
-<div class="output_html rendered_html output_subarea output_execute_result">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>indivID</th>
-      <th>Country</th>
-      <th>Location</th>
-      <th>Lat</th>
-      <th>Long</th>
-      <th>AvgDate_calBP</th>
-      <th>Sex</th>
-      <th>Cov_Autosomes</th>
-      <th>Data_Type</th>
-      <th>Publication</th>
-      <th>...</th>
-      <th>scale_marginal</th>
-      <th>se_marginal</th>
-      <th>se_scale_marginal_fd</th>
-      <th>scale_jt</th>
-      <th>se_scale_jt</th>
-      <th>eps_jt</th>
-      <th>se_eps_jt</th>
-      <th>nsnps</th>
-      <th>nref_haps</th>
-      <th>true_id</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>246</th>
-      <td>UstIshim_snpAD.DG</td>
-      <td>Russia</td>
-      <td>Ust'-Ishim, Siberia</td>
-      <td>57.7</td>
-      <td>71.1</td>
-      <td>45020</td>
-      <td>M</td>
-      <td>42.000000</td>
-      <td>Shotgun.diploid</td>
-      <td>Pruefer2017</td>
-      <td>...</td>
-      <td>648.951739</td>
-      <td>5.229318</td>
-      <td>5.249359</td>
-      <td>489.576793</td>
-      <td>18.258319</td>
-      <td>0.011235</td>
-      <td>0.000198</td>
-      <td>25425</td>
-      <td>49</td>
-      <td>UstIshim</td>
-    </tr>
-    <tr>
-      <th>252</th>
-      <td>Ust_Ishim_published.DG</td>
-      <td>Russia</td>
-      <td>Ust'-Ishim, Siberia</td>
-      <td>57.7</td>
-      <td>71.1</td>
-      <td>45020</td>
-      <td>M</td>
-      <td>42.000000</td>
-      <td>Shotgun.diploid</td>
-      <td>FuNature2014</td>
-      <td>...</td>
-      <td>664.816076</td>
-      <td>5.290020</td>
-      <td>5.299778</td>
-      <td>672.329497</td>
-      <td>1.188658</td>
-      <td>0.010736</td>
-      <td>0.000176</td>
-      <td>28975</td>
-      <td>49</td>
-      <td>Ust</td>
-    </tr>
-    <tr>
-      <th>1068</th>
-      <td>I0172</td>
-      <td>Germany</td>
-      <td>Esperstedt</td>
-      <td>51.42</td>
-      <td>11.68</td>
-      <td>5173</td>
-      <td>M</td>
-      <td>25.372000</td>
-      <td>1240K</td>
-      <td>MathiesonNature2015 (1240k of same same sample...</td>
-      <td>...</td>
-      <td>458.895586</td>
-      <td>4.053899</td>
-      <td>4.056732</td>
-      <td>356.447893</td>
-      <td>18.794729</td>
-      <td>0.012887</td>
-      <td>0.000071</td>
-      <td>22919</td>
-      <td>49</td>
-      <td>I0172</td>
-    </tr>
-    <tr>
-      <th>4941</th>
-      <td>Yana_old.SG</td>
-      <td>Russia</td>
-      <td>Yana RHS</td>
-      <td>70.72</td>
-      <td>135.42</td>
-      <td>31950</td>
-      <td>M</td>
-      <td>24.316303</td>
-      <td>Shotgun</td>
-      <td>SikoraNature2019</td>
-      <td>...</td>
-      <td>794.006384</td>
-      <td>6.612150</td>
-      <td>6.554481</td>
-      <td>672.455144</td>
-      <td>8.706519</td>
-      <td>0.018937</td>
-      <td>0.000203</td>
-      <td>29110</td>
-      <td>49</td>
-      <td>Yana</td>
-    </tr>
-    <tr>
-      <th>243</th>
-      <td>Loschbour_snpAD.DG</td>
-      <td>Luxembourg</td>
-      <td>Echternach</td>
-      <td>49.81</td>
-      <td>6.4</td>
-      <td>8050</td>
-      <td>M</td>
-      <td>22.000000</td>
-      <td>Shotgun.diploid</td>
-      <td>Pruefer2017</td>
-      <td>...</td>
-      <td>426.234761</td>
-      <td>3.904768</td>
-      <td>3.866840</td>
-      <td>356.258013</td>
-      <td>13.505983</td>
-      <td>0.003464</td>
-      <td>0.000162</td>
-      <td>25426</td>
-      <td>49</td>
-      <td>Loschbour</td>
-    </tr>
-  </tbody>
-</table>
-<p>5 rows × 24 columns</p>
-</div>
-</div>
-
 </div>
 
 </div>
@@ -13838,17 +13653,6 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
     <div class="prompt"></div>
 
 
-<div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/Biddanda/.pyenv/versions/3.7.5/lib/python3.7/site-packages/ipykernel_launcher.py:22: DeprecationWarning: The outline_patch property is deprecated. Use GeoAxes.spines[&#39;geo&#39;] or the default Axes properties instead.
-</pre>
-</div>
-</div>
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
 
 
 <div class="output_png output_subarea ">
@@ -13904,7 +13708,7 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
 
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>100%|██████████| 586/586 [00:00&lt;00:00, 2941.40it/s]
+<pre>100%|██████████| 586/586 [00:00&lt;00:00, 2694.63it/s]
 </pre>
 </div>
 </div>
@@ -13924,6 +13728,8 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
 <span class="n">test_df</span> <span class="o">=</span> <span class="n">pass_indivs</span><span class="p">[(</span><span class="n">pass_indivs</span><span class="o">.</span><span class="n">CEU_dist</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">pass_indivs</span><span class="o">.</span><span class="n">CEU_dist</span> <span class="o">&lt;=</span> <span class="n">km_thresh</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">pass_indivs</span><span class="o">.</span><span class="n">AvgDate_calBP</span> <span class="o">&lt;=</span> <span class="mf">1.5e4</span><span class="p">)]</span>
 <span class="n">test_df</span> <span class="o">=</span> <span class="n">test_df</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s1">&#39;Lat&#39;</span><span class="p">:</span> <span class="s1">&#39;float64&#39;</span><span class="p">,</span> <span class="s1">&#39;Long&#39;</span><span class="p">:</span> <span class="s1">&#39;float64&#39;</span><span class="p">,</span> <span class="s1">&#39;AvgDate_calBP&#39;</span><span class="p">:</span> <span class="s1">&#39;float64&#39;</span><span class="p">,</span> <span class="s1">&#39;Cov_Autosomes&#39;</span><span class="p">:</span> <span class="s1">&#39;float64&#39;</span><span class="p">})</span>
 <span class="n">test_df</span><span class="p">[</span><span class="s1">&#39;AvgDateGenerations&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">test_df</span><span class="o">.</span><span class="n">AvgDate_calBP</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="n">gen_time</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">test_df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
 <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">7.5</span><span class="p">,</span><span class="mf">3.5</span><span class="p">))</span>
 <span class="n">gs</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_gridspec</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
@@ -13949,29 +13755,26 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
 
 <span class="c1"># Linear Model to check for effect of age </span>
 <span class="c1"># NOTE : this accounts for lat/long and their interaction term)</span>
-<span class="c1"># y, X = dmatrices(&#39;mle_lambda_jt ~ AvgDateGenerations + Lat + Long + Lat:Long&#39;, </span>
-<span class="c1">#                  data=test_df,</span>
-<span class="c1">#                  return_type=&#39;dataframe&#39;)</span>
+<span class="n">y</span><span class="p">,</span> <span class="n">X</span> <span class="o">=</span> <span class="n">dmatrices</span><span class="p">(</span><span class="s1">&#39;scale_marginal ~ AvgDateGenerations + Lat + Long + Lat:Long&#39;</span><span class="p">,</span>
+                 <span class="n">data</span><span class="o">=</span><span class="n">test_df</span><span class="p">,</span>
+                 <span class="n">return_type</span><span class="o">=</span><span class="s1">&#39;dataframe&#39;</span><span class="p">)</span>
 
-<span class="c1"># res = sm.OLS(y,X).fit()</span>
-<span class="c1"># intercept = res.params[&#39;Intercept&#39;]</span>
-<span class="c1"># beta_age = res.params[&#39;AvgDateGenerations&#39;]</span>
-<span class="c1"># p_value = res.pvalues[&#39;AvgDateGenerations&#39;]</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">OLS</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">intercept</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;Intercept&#39;</span><span class="p">]</span>
+<span class="n">beta_age</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;AvgDateGenerations&#39;</span><span class="p">]</span>
+<span class="n">p_value</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">pvalues</span><span class="p">[</span><span class="s1">&#39;AvgDateGenerations&#39;</span><span class="p">]</span>
 
 <span class="n">marginal_lambda</span> <span class="o">=</span> <span class="n">test_df</span><span class="o">.</span><span class="n">scale_marginal</span><span class="o">.</span><span class="n">values</span>
 <span class="n">marginal_lambda_se</span> <span class="o">=</span> <span class="n">test_df</span><span class="o">.</span><span class="n">se_scale_marginal_fd</span><span class="o">.</span><span class="n">values</span>
-<span class="c1"># test_age = np.arange(np.min(age_gen), np.max(age_gen))</span>
-<span class="c1"># pred_lambda = intercept + beta_age*test_age</span>
+
 <span class="n">ax3</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">gs</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">:])</span>
 <span class="n">im2</span> <span class="o">=</span> <span class="n">ax3</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">rand_jitter</span><span class="p">(</span><span class="n">age_years</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">),</span> <span class="n">marginal_lambda</span><span class="p">,</span>
                    <span class="n">yerr</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">marginal_lambda_se</span><span class="p">,</span>  <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
                    <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
-<span class="c1"># legend_str = r&quot;$\hat{\beta} = %0.2f$&quot; % beta_age </span>
-<span class="c1"># legend_str += &quot;\n&quot;</span>
-<span class="c1"># legend_str += r&quot;$p = %s$&quot; % num2tex(p_value, precision=2)</span>
-<span class="c1"># ax3.plot(test_age, pred_lambda, &#39;r--&#39;, lw=3, label=legend_str)</span>
-<span class="c1"># ax3.legend(fontsize=10)</span>
+<span class="c1"># Print out the results of the linear regression</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">beta_age</span><span class="p">,</span> <span class="n">p_value</span><span class="p">)</span>
+
 <span class="n">ax3</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$\hat{\lambda}$  (Morgans)&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
 <span class="n">ax3</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;Sample age (Years)&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
 <span class="n">debox</span><span class="p">(</span><span class="n">ax3</span><span class="p">);</span>
@@ -13998,8 +13801,9 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
     <div class="prompt"></div>
 
 
-<div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/Biddanda/.pyenv/versions/3.7.5/lib/python3.7/site-packages/ipykernel_launcher.py:25: DeprecationWarning: The outline_patch property is deprecated. Use GeoAxes.spines[&#39;geo&#39;] or the default Axes properties instead.
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>344
+-0.5426443743024514 2.1883023851230778e-29
 </pre>
 </div>
 </div>
@@ -14320,20 +14124,6 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
     <div class="prompt"></div>
 
 
-<div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/Biddanda/.pyenv/versions/3.7.5/lib/python3.7/site-packages/ipykernel_launcher.py:62: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
-/Users/Biddanda/.pyenv/versions/3.7.5/lib/python3.7/site-packages/ipykernel_launcher.py:63: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
-/Users/Biddanda/.pyenv/versions/3.7.5/lib/python3.7/site-packages/IPython/core/pylabtools.py:132: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
-  fig.canvas.print_figure(bytes_io, **kw)
-</pre>
-</div>
-</div>
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
 
 
 <div class="output_png output_subarea ">
@@ -14372,41 +14162,6 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
 </pre></div>
 
     </div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/Biddanda/.pyenv/versions/3.7.5/lib/python3.7/site-packages/ipykernel_launcher.py:12: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-  if sys.path[0] == &#39;&#39;:
-/Users/Biddanda/.pyenv/versions/3.7.5/lib/python3.7/site-packages/ipykernel_launcher.py:12: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-  if sys.path[0] == &#39;&#39;:
-/Users/Biddanda/.pyenv/versions/3.7.5/lib/python3.7/site-packages/ipykernel_launcher.py:12: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-  if sys.path[0] == &#39;&#39;:
-</pre>
-</div>
-</div>
-
 </div>
 </div>
 
