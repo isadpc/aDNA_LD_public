@@ -1,0 +1,22 @@
+name: adnald
+channels:
+  - conda-forge
+  - bioconda
+  - anaconda
+dependencies:
+  - python
+  - numpy
+  - scipy
+  - geos
+  - pip
+  - numba
+  - pip:
+    - tskit
+    - tszip
+    - msprime
+    - pandas
+    - matplotlib
+    - tqdm
+    - patsy
+    - statsmodels
+    - cartopy
