@@ -11,13 +11,13 @@ dependencies:
   - proj4
   - pip
   - numba
+  - msprime
+  - cartopy
   - pip:
     - tskit
     - tszip
-    - msprime
     - pandas
     - matplotlib
     - tqdm
     - patsy
     - statsmodels
-    - cartopy
