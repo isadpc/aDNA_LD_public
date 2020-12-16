@@ -8,6 +8,7 @@ dependencies:
   - numpy
   - scipy
   - geos
+  - proj4
   - pip
   - numba
   - pip:
