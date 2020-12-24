@@ -440,8 +440,22 @@ class TwoLocusTheoryConstant:
         p111 = lambda r, t: r * (1.0 - np.exp(-t * (r / 2 + 1))) / (r + 2)  # noqa
         return p111(rho, ta) * u111(rho) + (1 - p111(rho, ta)) * u200(rho)
 
+    def _eTATB_appx(rho, ta):
+        u200 = lambda rho: (rho ** 2 + 14 * rho + 36) / (
+            rho ** 2 + 13 * rho + 18
+        )  # noqa
+        u111 = lambda rho: (rho ** 2 + 13 * rho + 24) / (
+            rho ** 2 + 13 * rho + 18
+        )  # noqa
+        # Calculate the probability of uncoupling of the ancient haplotype
+        p111_appx = lambda r, t: (t * r) / 2  # noqa
+        return p111_appx(rho, ta) * u111(rho) + (1 - p111_appx(rho, ta)) * u200(rho)
+
     def _corrLALB(rho, ta):
         return TwoLocusTheoryConstant._eTATB(rho, ta) - 1.0
+
+    def _corrLALB_appx(rho, ta):
+        return TwoLocusTheoryConstant._eTATB_appx(rho, ta) - 1.0
 
     def _covLALB(rho, ta):
         return 4 * (TwoLocusTheoryConstant._corrLALB(rho, ta))
