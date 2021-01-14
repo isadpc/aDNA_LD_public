@@ -53,6 +53,15 @@
       "partition": "jnovembre",
       "ncores": "1"
 	},
+    "monte_carlo_sasb_sims_v2":
+	{
+      "time" : "1:00:00",
+      "mem": "8G",
+      "out": "log/{rule}-%j.out",
+      "err": "log/{rule}-%j.err",
+      "partition": "jnovembre",
+      "ncores": "1"
+	},
     "est_Ne_ta_1kb_sim_bootstrap_monte_carlo_loco":
 	{
       "time" : "2:00:00",

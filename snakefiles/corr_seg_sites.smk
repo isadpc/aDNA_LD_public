@@ -18,36 +18,6 @@ configfile: "config.yml"
 include: "hap_copying.smk"
 
 # --- 1. Estimation from Simulations --- #
-rule estimate_autocorr_sA_Sb_sims:
-  input:
-    expand(config['tmpdir'] + 'hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{rep}.npz', rep=np.arange(20))
-  output:
-      autocorr=config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_autocorr_L{L,\d+}_N{N,\d+}.npz'
-  resources:
-    mem_mb=10000
-  run:
-    corr_sim = CorrSegSitesSims()
-    for f in tqdm(input):
-      corr_sim._load_data(f)
-    for i in tqdm(range(20)):
-      corr_sim.calc_windowed_seg_sites(chrom=i, L=int(wildcards.L))
-    i_s = np.arange(1, int(wildcards.N))
-    rec_dist = []
-    corr_SA_SB = []
-    for i in tqdm(i_s):
-      a,b =  corr_sim.autocorr_sA_sB(sep=i)
-      rec_dist.append(a)
-      corr_SA_SB.append(b)
-    rec_dists = np.vstack(rec_dist).astype(np.float32)
-    corr_SA_SB = np.vstack(corr_SA_SB).astype(np.float32)
-    np.savez_compressed(output.autocorr, corr_SA_SB=corr_SA_SB, rec_dists=rec_dists)
-
-
-rule estimate_autocorr_sA_sB_sims:
-  input:
-    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_autocorr_L{L}_N{N}.npz', scenario=['SerialConstant','TennessenEuropean'], mod_n=1, n_anc=1, length=20, Ne=10000, ta=[0, 10000], L=[1000], N=200)
-
-
 rule monte_carlo_sasb_sims:
   input:
     expand(config['tmpdir'] + 'hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{seed}.npz', seed=np.arange(1,21))
@@ -80,13 +50,49 @@ rule monte_carlo_sasb_sims:
                         corr_s1_s2=corr_s1_s2,
                         se_r=se_r)
 
+rule monte_carlo_sasb_sims_v2:
+  """NOTE : the N parameter does not matter here """
+  input:
+    expand(config['tmpdir'] + 'hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{seed}.npz', seed=np.arange(1,21))
+  output:
+    corr_SASB = config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{full_seed,\d+}.monte_carlo_L{L,\d+}.N{N,\d+}.v2.npz'
+  wildcard_constraints:
+    scenario='(SerialConstant|TennessenEuropean)',
+    mod_n = '1',
+    n_anc = '1'
+  run:
+    corr_sim = CorrSegSitesSims()
+    for f in tqdm(input):
+      corr_sim._load_data(f)
+    for d in np.logspace(1, 4, 100):
+      for i in tqdm(range(20)):
+        corr_sim.monte_carlo_corr_SA_SB_v2(chrom=i, dist=d, nreps=5000, L=int(wildcards.L), seed=int(wildcards.full_seed))
+    # output slightly less
+    rec_rate_mean, rec_rate_se, corr_s1_s2, se_r = corr_sim.gen_binned_rec_rate(bins=np.logspace(-7,-3, 25))
+    np.savez_compressed(output.corr_SASB,
+                        scenario=wildcards.scenario,
+                        seed=np.int32(wildcards.full_seed),
+                        Ne = np.int32(wildcards.Ne),
+                        ta = np.int32(wildcards.ta),
+                        L = np.int32(wildcards.L),
+                        N = np.int32(wildcards.N),
+                        rec_rate_mean=rec_rate_mean,
+                        rec_rate_se=rec_rate_se,
+                        corr_s1_s2=corr_s1_s2,
+                        se_r=se_r)
 
+    
+    
 
 # Landing rule for generating the simulations ...
 rule estimate_monte_carlo_sA_sB_sims:
   input:
     expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_1_1_{ta}_20_Ne_10000_{full_seed}.monte_carlo_L{L}.N{N}.npz', scenario=['SerialConstant','TennessenEuropean'], ta=[0,1000, 10000], L=1000, N=200, full_seed=42),
-    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_1_1_{ta}_20_Ne_6958_{full_seed}.monte_carlo_L{L}.N{N}.npz', scenario=['SerialConstant'], ta=[0,1000, 10000], L=1000, N=200, full_seed=24)
+    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_1_1_{ta}_20_Ne_6958_{full_seed}.monte_carlo_L{L}.N{N}.npz', scenario=['SerialConstant'], ta=[0,1000, 10000], L=1000, N=200, full_seed=24),
+
+rule estimate_monte_carlo_sA_sB_sims_v2:
+  input:
+    expand(config['tmpdir'] + 'corr_seg_sites/sims/{scenario}/corr_sA_Sb_1_1_{ta}_20_Ne_10000_{full_seed}.monte_carlo_L{L}.N{N}.v2.npz', scenario=['SerialConstant'], ta=[0,1000,10000], L=1000, N=200, full_seed=24)
 
 
 
@@ -95,6 +101,38 @@ rule monte_carlo_sA_sB_results:
     files=rules.estimate_monte_carlo_sA_sB_sims.input
   output:
     'results/corr_seg_sites/monte_carlo_sims_sA_sB_demography.csv'
+  run:
+    tot_df = []
+    for x in tqdm(input.files):
+      sim = np.load(x)
+      # Loading the specific entries
+      scenario = sim['scenario']
+      seed = sim['seed']
+      Ne = sim['Ne']
+      N = sim['N']
+      ta = sim['ta']
+      L = sim['L']
+      rec_rate_mean = sim['rec_rate_mean']
+      rec_rate_se = sim['rec_rate_se']
+      corr_s1_s2 = sim['corr_s1_s2']
+      se_r = sim['se_r']
+      # Do some light assertions
+      assert(rec_rate_mean.size == rec_rate_se.size)
+      assert(rec_rate_mean.size == corr_s1_s2.size)
+      for i in range(rec_rate_mean.size):
+        cur_row = [scenario, N, ta, L, rec_rate_mean[i], rec_rate_se[i], corr_s1_s2[i], se_r[i], seed, Ne]
+        tot_df.append(cur_row)
+
+    # generate the full output
+    final_df = pd.DataFrame(tot_df, columns=['scenario','N','ta','L','rec_rate_mean','rec_rate_se','corr_s1_s2','se_corr','seed', 'Ne'])
+    final_df = final_df.dropna()
+    final_df.to_csv(str(output), index=False, header=final_df.columns)
+    
+rule monte_carlo_sA_sB_results_v2:
+  input:
+    files=rules.estimate_monte_carlo_sA_sB_sims_v2.input
+  output:
+    'results/corr_seg_sites/monte_carlo_sims_sA_sB_demography.v2.csv'
   run:
     tot_df = []
     for x in tqdm(input.files):
@@ -371,7 +409,9 @@ test_indivs_1kg = np.hstack([test_yri_1kg, test_chb_1kg, test_ceu_1kg, test_gih_
 
 rule monte_carlo_real_data_1kg_samples:
   input:
-    expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=['LBK', 'UstIshim'], MOD=test_indivs_1kg, recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50])
+#     expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=['LBK', 'UstIshim'], MOD=test_indivs_1kg, recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50]),
+    expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=[test_ceu_1kg[0]], MOD=test_ceu_1kg[1:], recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50])
+    
 
 
 rule concatenate_tot_corr_piA_piB:

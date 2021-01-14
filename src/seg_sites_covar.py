@@ -1,6 +1,5 @@
 """Methods to compute the correlation in segregating sites between samples."""
 
-
 import numpy as np
 import numpy.ma as ma
 import pyranges
@@ -116,7 +115,7 @@ class CorrSegSites:
         """Calculate windowed estimates of segregating sites.
 
         Arguments:
-            *chrom: identifier for the chromosome
+            * chrom: identifier for the chromosome
             * L: length of independent locus
             * filt_rec: filter recombination
             * mask: bed file for the underlying mask
@@ -132,7 +131,6 @@ class CorrSegSites:
             phys_pos = phys_pos[idx]
             rec_pos = rec_pos[idx]
             weights = weights[idx]
-        # This is a check to make sure that we do not count the snps added in here..
         if mask is not None:
             phys_pos = phys_pos.astype(np.float64)
             df_mask = pyranges.read_bed(mask)
@@ -170,7 +168,8 @@ class CorrSegSites:
         # Stacking all of the data to make sure that we can use it later on
         tot_data = np.vstack([windowed_vars, bin_edges[1:], rec_midpts, mask_weights])
         self.chrom_total_dict[chrom] = tot_data
-
+    
+    
     def autocorr_sA_sB(self, sep=1):
         """Compute the autocorrelation across windows separated by a distance.
 
@@ -282,7 +281,105 @@ class CorrSegSites:
         monte_carlo_results = np.vstack([rec_rate_mean, rec_rate_se, corr_s1_s2, se_r])
         self.monte_carlo_results = monte_carlo_results
         return (rec_rate_mean, rec_rate_se, corr_s1_s2, se_r)
-
+  
+    def monte_carlo_corr_SA_SB_v2(self, L=1e3, dist=100, nreps=1000, chrom=0, seed=42, filt_rec=True, mask=None):
+        """Estimate the correlation using alternative Monte-Carlo Sampling.
+      
+        Key: this allows us to test much shorter length scales
+  
+        """
+        assert self.chrom_physpos_dict is not None
+        assert self.chrom_pos_dict is not None
+        assert L > 0 
+        assert dist > 0
+        assert seed > 0
+        np.random.seed(seed)
+        phys_pos = self.chrom_physpos_dict[chrom]
+        rec_pos = self.chrom_pos_dict[chrom]
+        weights = self.chrom_weight_dict[chrom]
+        if filt_rec:
+            diff = np.abs(rec_pos[:-1] - rec_pos[1:])
+            idx = np.where(diff != 0)[0]
+            phys_pos = phys_pos[idx]
+            rec_pos = rec_pos[idx]
+            weights = weights[idx]
+        if mask is not None:
+            phys_pos = phys_pos.astype(np.float64)
+            df_mask = pyranges.read_bed(mask)
+            df_pos = PyRanges(chromosomes=chrom, starts=phys_pos, ends=(phys_pos + 1))
+            cov_sites = df_pos.coverage(df_mask)
+            sites_idx = np.array(cov_sites.FractionOverlaps.astype(np.float32))
+            idx = np.where(sites_idx > 0.0)[0]
+            phys_pos[idx] = np.nan
+        # 1. Setup bins separated by some distance
+        startp = np.nanmin(phys_pos)
+        endp = startp + L
+        windowed_vars = []
+        bins = []
+        while endp < np.nanmax(phys_pos):
+          bins.append((startp,endp))
+          start = np.searchsorted(phys_pos[~np.isnan(phys_pos)], startp, 'left')
+          end = np.searchsorted(phys_pos[~np.isnan(phys_pos)], endp, 'right')
+          # Append this to actually weight the variants
+          windowed_vars.append(end - start)
+          startp += (L + dist)
+          endp += (L + dist)
+        windowed_vars = np.array(windowed_vars)
+        bin_edges = np.array(bins).ravel()
+#         print(bin_edges.size)
+#         print(windowed_vars.size, bin_edges.size)
+        assert (bin_edges.size  / 2) == windowed_vars.size
+        # Interpolate the midpoints of the recombination bins
+        f = interpolate.interp1d(phys_pos, rec_pos)
+        rec_dist = f(bin_edges[2:-1:2]) - f(bin_edges[1:-2:2])
+#         print(np.mean(rec_dist))
+        windowed_vars = windowed_vars[:-1]
+#         print(rec_dist.size, windowed_vars.size)
+        
+        # Calculate the weightings from the mask as needed ...
+        mask_weights = np.ones(windowed_vars.size)
+        if mask is not None:
+            # Mask must be a bedfile
+            df_windows = PyRanges(
+                chromosomes=chrom, starts=bin_edges[:-1], ends=bin_edges[1:]
+            )
+            df_mask = pyranges.read_bed(mask)
+            cov = df_windows.coverage(df_mask)
+            mask_weights = np.array(cov.FractionOverlaps.astype(np.float32))
+            # Set the mask weights to scale up the fraction that may be missing!
+            mask_weights = 1.0 / (1.0 - mask_weights)
+            mask_weights[np.isinf(mask_weights)] = np.nan
+        
+        
+        # add to whatever total datatype that we require?
+        windowed_het_weighted = mask_weights * windowed_vars
+#         print(windowed_het_weighted.size)
+        s1s = windowed_het_weighted[:-2:2]
+        s2s = windowed_het_weighted[1:-1:2]
+#         print(rec_dist.size, s1s.size, s2s.size)
+        assert s1s.size == s2s.size
+#         assert ((rec_dist.size  / 2) - 1) == s1s.size
+        # Perform the Monte-Carlo resampling here
+        idx = np.random.randint(s1s.size, size=nreps)
+        s1s_samp = s1s[idx]
+        s2s_samp = s2s[idx]
+        rec_dist_samp = rec_dist[2*idx]
+        if self.rec_dist is None:
+            self.rec_dist = {}
+            self.s1 = {}
+            self.s2 = {}
+        if chrom in self.rec_dist:
+          tmp_rec_dist = np.append(self.rec_dist[chrom], rec_dist_samp)
+          tmp_s1 = np.append(self.s1[chrom], s1s_samp)
+          tmp_s2 = np.append(self.s2[chrom], s2s_samp)
+          self.rec_dist[chrom] = tmp_rec_dist
+          self.s1[chrom] = tmp_s1
+          self.s2[chrom] = tmp_s2 
+        else:
+          self.rec_dist[chrom] = rec_dist_samp
+          self.s1[chrom] = s1s_samp
+          self.s2[chrom] = s2s_samp 
+        
 
 class CorrSegSitesSims(CorrSegSites):
     """Sub-class for computing the correlation in segregating sites."""
