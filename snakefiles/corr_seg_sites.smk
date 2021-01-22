@@ -406,38 +406,41 @@ test_gih_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'GIH']['sample'].values[:3]
 test_indivs_1kg = np.hstack([test_yri_1kg, test_chb_1kg, test_ceu_1kg, test_gih_1kg])
 
 # np.array('NA12830')
+print(test_ceu_1kg)
 
 rule monte_carlo_real_data_1kg_samples:
   input:
-#     expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=['LBK', 'UstIshim'], MOD=test_indivs_1kg, recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50]),
+    expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=['LBK', 'UstIshim'], MOD=test_indivs_1kg, recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50]),
     expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=[test_ceu_1kg[0]], MOD=test_ceu_1kg[1:], recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50])
     
 
 
 rule concatenate_tot_corr_piA_piB:
   input:
-    files = expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=['LBK', 'UstIshim'], MOD=test_indivs_1kg, recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=50)
+    files = rules.monte_carlo_real_data_1kg_samples.input
   output:
-    'results/corr_seg_sites/monte_carlo_est_LBK_UstIshim.csv'
+    'results/corr_seg_sites/monte_carlo_est_LBK_UstIshim_modern.csv'
   run:
     tot_df_rows = []
-    for a in ['LBK','UstIshim']:
+    for a in ['LBK','UstIshim', test_ceu_1kg[0]]:
       # Getting only files with that filename on them
       valid_files = [x for x in input.files if a in x]
       for x in tqdm(test_indivs_1kg):
         print('Corr(pi_B, pi_B) with: %s' % x)
         fname = [y for y in valid_files if x in y]
-        assert(len(fname) >= 1)
-        print(fname)
-        df = np.load(fname[-1])
-        rec_rate_mean = df['rec_rate_mean']
-        mean_corr_s1_s2 = df['corr_s1_s2']
-        rec_rate_se = df['rec_rate_se']
-        se_r = df['se_r']
-        assert(rec_rate_mean.size == mean_corr_s1_s2.size)
-        for i in range(rec_rate_mean.size):
-          cur_row = [a,x,rec_rate_mean[i], rec_rate_se[i], mean_corr_s1_s2[i], se_r[i]]
-          tot_df_rows.append(cur_row)
+        try:
+          assert(len(fname) >= 1)
+          df = np.load(fname[-1])
+          rec_rate_mean = df['rec_rate_mean']
+          mean_corr_s1_s2 = df['corr_s1_s2']
+          rec_rate_se = df['rec_rate_se']
+          se_r = df['se_r']
+          assert(rec_rate_mean.size == mean_corr_s1_s2.size)
+          for i in range(rec_rate_mean.size):
+            cur_row = [a,x,rec_rate_mean[i], rec_rate_se[i], mean_corr_s1_s2[i], se_r[i]]
+            tot_df_rows.append(cur_row)
+        except:
+          pass
     df = pd.DataFrame(tot_df_rows, columns=['ANC_ID','MOD_ID','rec_rate_mean','rec_rate_se', 'corr_piA_piB', 'se_corr_piA_piB'])
     final_df = df.dropna()
     final_df.to_csv(str(output), index=False, header=final_df.columns)
