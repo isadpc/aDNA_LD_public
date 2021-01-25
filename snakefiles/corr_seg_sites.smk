@@ -81,8 +81,8 @@ rule monte_carlo_sasb_sims_v2:
                         corr_s1_s2=corr_s1_s2,
                         se_r=se_r)
 
-    
-    
+
+
 
 # Landing rule for generating the simulations ...
 rule estimate_monte_carlo_sA_sB_sims:
@@ -127,7 +127,7 @@ rule monte_carlo_sA_sB_results:
     final_df = pd.DataFrame(tot_df, columns=['scenario','N','ta','L','rec_rate_mean','rec_rate_se','corr_s1_s2','se_corr','seed', 'Ne'])
     final_df = final_df.dropna()
     final_df.to_csv(str(output), index=False, header=final_df.columns)
-    
+
 rule monte_carlo_sA_sB_results_v2:
   input:
     files=rules.estimate_monte_carlo_sA_sB_sims_v2.input
@@ -412,7 +412,7 @@ rule monte_carlo_real_data_1kg_samples:
   input:
     expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=['LBK', 'UstIshim'], MOD=test_indivs_1kg, recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50]),
     expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=[test_ceu_1kg[0]], MOD=test_ceu_1kg[1:], recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50])
-    
+
 
 
 rule concatenate_tot_corr_piA_piB:
