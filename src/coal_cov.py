@@ -104,14 +104,16 @@ class TwoLocusSerialCoalescent(TwoLocusSimulation):
 
     def _simulate(self, **kwargs):
         recomb_map = msp.RecombinationMap.uniform_map(
-            self.loci, self.rec_rate, num_loci=self.loci
+            self.loci, self.rec_rate/self.loci, num_loci=self.loci
         )
-        self.treeseq = msp.simulate(
+        ts = msp.simulate(
             Ne=self.Ne,
             samples=self.samples,
             recombination_map=recomb_map,
-            num_replicates=self.reps,
+            num_replicates=self.reps, 
+            **kwargs
         )
+        return(ts)
 
 
 class TwoLocusSerialDivergence(TwoLocusSimulation):
@@ -459,7 +461,10 @@ class TwoLocusTheoryConstant:
 
     def _covLALB(rho, ta):
         return 4 * (TwoLocusTheoryConstant._corrLALB(rho, ta))
-
+    
+    def _covSASB(rho, ta, theta=1.0):
+        return (theta**2)/4. *(TwoLocusTheoryConstant._covLALB(rho, ta))
+    
     def _corrSASB(rho, ta, theta=1.0):
         """Correlation in segregating sites."""
         corrSASB = (

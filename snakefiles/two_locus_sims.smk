@@ -152,3 +152,51 @@ rule combine_branch_length_est:
     df_final = pd.DataFrame(tot_df, columns=['scenario','ta','rec_rate','corr_bl','cov_bl','exp_bl','Ne','Ne_est', 'Nreps', 'seed'])
     df_final = df_final.dropna()
     df_final.to_csv(str(output), index=False, header=df_final.columns)
+
+    
+    
+    
+# ------- Two Locus Simulations for correlation in mutations ------- #
+def pair_mut(ts_reps, nreps, **kwargs):
+    """Computing the paired mutations in set of two-locus simulations"""
+    pair_muts = np.zeros(shape=(nreps, 2))
+    i = 0
+    for ts in ts_reps:
+        cur_muts = ts.segregating_sites(mode="site", windows=[0.,1.,2.], **kwargs)
+        pair_muts[i] = cur_muts[:2]
+        i += 1
+    return(pair_muts)
+
+
+rule sim_two_locus_mutations:
+    """Simulating the two locus mutations"""
+    output:
+        corr_est = config['tmpdir'] + 'two_loci/serial/corrmut_theory/est_{ta,\d+}_{nreps,\d+}_seed{seed,\d+}_corr_mut.npz'
+    run:
+        Ne = 1.
+        nreps = int(wildcards.nreps)
+        ta = int(wildcards.ta) / 1000.
+        seed = int(wildcards.seed)
+        rhos = np.logspace(-4,2,100)
+        corr_mut = np.zeros(rhos.size)
+        for i,r in tqdm(enumerate(rhos)):
+            cur_sim = TwoLocusSerialCoalescent(ta=ta, Ne=Ne, rec_rate=r, reps=nreps)
+            ts_reps = cur_sim._simulate(mutation_rate=theta, random_seed=seed)
+            m = pair_mut(ts_reps, nreps, span_normalise=False)
+            corr_mut[i] = pearsonr(m[:,0], m[:,1])[0]
+        se_r_mut = np.sqrt((1. - (corr_mut**2))/(nreps-2))
+        # Saving the approach here ...
+        np.savez(str(output),
+                 scenario='Two-Locus Theory',
+                 seed=np.int32(wildcards.seed),
+                 rec_rate=rhos,
+                 ta=ta,
+                 corr_piA_piB=corr_mut,
+                 se_corr_piApiB=se_r_mut, Ne=1.)
+        
+        
+rule test_two_locus_sims:
+    """Generating the full two-locus simulation"""
+    input:
+        expand(config['tmpdir'] + 'two_loci/serial/corrmut_theory/est_{ta}_{nreps}_seed{seed}_corr_mut.npz', ta=[1000,100,10], nreps=1000, seed=42)
+            
