@@ -171,13 +171,14 @@ def pair_mut(ts_reps, nreps, **kwargs):
 rule sim_two_locus_mutations:
     """Simulating the two locus mutations"""
     output:
-        corr_est = config['tmpdir'] + 'two_loci/serial/corrmut_theory/est_{ta,\d+}_{nreps,\d+}_seed{seed,\d+}_corr_mut.npz'
+        corr_est = config['tmpdir'] + 'two_loci/serial/corrmut_theory/est_{ta,\d+}_theta{theta,\d+}_{nreps,\d+}_seed{seed,\d+}_corr_mut.npz'
     run:
         Ne = 1.
         nreps = int(wildcards.nreps)
         ta = int(wildcards.ta) / 1000.
         seed = int(wildcards.seed)
         rhos = np.logspace(-4,2,100)
+        theta = int(wildcards.theta) / 1000.
         corr_mut = np.zeros(rhos.size)
         for i,r in tqdm(enumerate(rhos)):
             cur_sim = TwoLocusSerialCoalescent(ta=ta, Ne=Ne, rec_rate=r, reps=nreps)
@@ -191,12 +192,37 @@ rule sim_two_locus_mutations:
                  seed=np.int32(wildcards.seed),
                  rec_rate=rhos,
                  ta=ta,
+                 theta = theta,
                  corr_piA_piB=corr_mut,
                  se_corr_piApiB=se_r_mut, Ne=1.)
         
         
-rule test_two_locus_sims:
-    """Generating the full two-locus simulation"""
+rule full_two_locus_sims:
+    """Generating the full two-locus simulations for the correlation in number of mutations."""
     input:
-        expand(config['tmpdir'] + 'two_loci/serial/corrmut_theory/est_{ta}_{nreps}_seed{seed}_corr_mut.npz', ta=[1000,100,10], nreps=1000, seed=42)
-            
+        expand(config['tmpdir'] + 'two_loci/serial/corrmut_theory/est_{ta}_theta{theta}_{nreps}_seed{seed}_corr_mut.npz', ta=[1000,100,10], theta=400, nreps=[1000, nreps], seed=42)
+
+        
+rule collect_two_locus_sims:
+  input:
+    files = rules.full_two_locus_sims.input
+  output:
+    'results/two_loci/theory_mut_corr.csv'
+  run:
+    tot_df = []
+    for f in tqdm(input.files):
+      # Load in the current dataset
+      df = np.load(f)
+      scenario = df['scenario']
+      rhos = df['rec_rate']
+      ta = df['ta']
+      theta = df['theta']
+      corr_piA_piB = df['corr_piA_piB']
+      se_corr_piApiB = df['se_corr_piApiB']
+      seed = df['seed']
+      for (r,cr,se_r) in zip(rhos, corr_piA_piB, se_corr_piApiB):
+        tot_df.append([scenario, ta, seed, r, cr, se_r])
+          # Creating the dataframe and outputting to a CSV
+    df_final = pd.DataFrame(tot_df, columns=['scenario','ta','seed','rec_rate','corr_piApiB','se_corr_piApiB'])
+    df_final = df_final.dropna()
+    df_final.to_csv(str(output), index=False, header=df_final.columns)
