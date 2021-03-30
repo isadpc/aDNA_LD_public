@@ -12,4 +12,3 @@ docs/%.html: notebooks/%.ipynb
 		--output-dir $(dir $@)\
 		--template classic\
 
-# TODO : I need to have a targeted rule to run the notebook from top to bottom before generating a webpage...
