@@ -194,13 +194,14 @@ rule sim_two_locus_mutations:
                  ta=ta,
                  theta = theta,
                  corr_piA_piB=corr_mut,
+                 nreps=nreps,
                  se_corr_piApiB=se_r_mut, Ne=1.)
         
         
 rule full_two_locus_sims:
     """Generating the full two-locus simulations for the correlation in number of mutations."""
     input:
-        expand(config['tmpdir'] + 'two_loci/serial/corrmut_theory/est_{ta}_theta{theta}_{nreps}_seed{seed}_corr_mut.npz', ta=[1000,100,10], theta=400, nreps=[1000, nreps], seed=42)
+        expand(config['tmpdir'] + 'two_loci/serial/corrmut_theory/est_{ta}_theta{theta}_{nreps}_seed{seed}_corr_mut.npz', ta=[1000,100,10,0], theta=400, nreps=[1000, 5000, nreps], seed=42)
 
         
 rule collect_two_locus_sims:
@@ -217,12 +218,13 @@ rule collect_two_locus_sims:
       rhos = df['rec_rate']
       ta = df['ta']
       theta = df['theta']
+      nreps = df['nreps']
       corr_piA_piB = df['corr_piA_piB']
       se_corr_piApiB = df['se_corr_piApiB']
       seed = df['seed']
       for (r,cr,se_r) in zip(rhos, corr_piA_piB, se_corr_piApiB):
-        tot_df.append([scenario, ta, seed, r, cr, se_r])
+        tot_df.append([scenario, ta, seed, r, cr, se_r, nreps])
           # Creating the dataframe and outputting to a CSV
-    df_final = pd.DataFrame(tot_df, columns=['scenario','ta','seed','rec_rate','corr_piApiB','se_corr_piApiB'])
+    df_final = pd.DataFrame(tot_df, columns=['scenario','ta','seed','rec_rate','corr_piApiB','se_corr_piApiB', 'nreps'])
     df_final = df_final.dropna()
     df_final.to_csv(str(output), index=False, header=df_final.columns)
