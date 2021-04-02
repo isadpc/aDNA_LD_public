@@ -430,6 +430,11 @@ class TwoLocusSerialBottleneck(TwoLocusSimulation):
 
 class TwoLocusTheoryConstant:
     """Theoretical two-locus properties in a model of population-continuity."""
+    def _p100_to_011(rho,ta):
+        return(r * (1.0 - np.exp(-t * (r / 2 + 1))) / (r + 2.))
+
+    def _p011_to_100(rho,ta):
+        return(2. * (1.0 - np.exp(-t * (r / 2 + 1))) / (r + 2.))
 
     def _eTATB(rho, ta):
         u200 = lambda rho: (rho ** 2 + 14 * rho + 36) / (
