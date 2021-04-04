@@ -337,7 +337,7 @@ rule create_hap_panel_1kg_ceu_real_chrom:
   output:
     hap_panel = config['tmpdir'] + 'full_sim_all/{scenario}/ceu_sim_chrX_{genmap}/serial_coal_{mod_n, \d+}_Ne{Ne,\d+}_seed_{seed,\d+}.panel.npz'
   wildcard_constraints:
-    scenario = '(SerialConstant|TennessenEuropean|TennessenDoubleGrowthEuropean|TennessenQuadGrowthEuropean|IBDNeUK10K)'
+    scenario = '(SerialConstant|TennessenEuropean|Tennessen*GrowthEuropean|IBDNeUK10K|TennessenEuropeanXchr|IBDNeUK10KXchr)'
   run:
     times_kya_df = pd.read_csv(input.times_ancient)
     times_kya = times_kya_df.age_kya.values
@@ -356,6 +356,9 @@ rule create_hap_panel_1kg_ceu_real_chrom:
     elif scenario == 'TennessenEuropean':
       cur_sim = SerialTennessenModel()
       cur_sim._add_samples(mod_pop=1, anc_pop=1, n_mod=mod_n, n_anc=n_anc, t_anc=t_anc)
+    elif scenario == 'TennessenEuropeanXchr':
+      cur_sim = SerialTennessenModel(scale=0.750)
+      cur_sim._add_samples(mod_pop=1, anc_pop=1, n_mod=mod_n, n_anc=n_anc, t_anc=t_anc)
     elif scenario == 'TennessenDoubleGrowthEuropean':
       cur_sim = SerialTennessenModel()
       cur_sim._add_samples(mod_pop=1, anc_pop=1, n_mod=mod_n, n_anc=n_anc, t_anc=t_anc)
@@ -368,6 +371,10 @@ rule create_hap_panel_1kg_ceu_real_chrom:
       cur_sim = SerialIBDNeUK10K(demo_file=ibd_ne_demo_file)
       cur_sim._set_demography()
       cur_sim._add_samples(n_mod = mod_n, n_anc = n_anc, t_anc = t_anc)
+    elif scenario == 'IBDNeUK10KXchr':
+      cur_sim = SerialIBDNeUK10K(demo_file=ibd_ne_demo_file)
+      cur_sim._set_demography(scale=0.750)
+      cur_sim._add_samples(n_mod = mod_n, n_anc = n_anc, t_anc = t_anc)
     else:
       raise ValueError('Improper scenario input for this simulation!')
     # Conducting the actual simulation ...
@@ -377,7 +384,7 @@ rule create_hap_panel_1kg_ceu_real_chrom:
     ts = cur_sim._simulate(mutation_rate=mut_rate, recombination_map=recmap, random_seed=seed)
     geno = ts.genotype_matrix().T
     phys_pos = np.array([v.position for v in ts.variants()])
-    # Use the map to interpolate the recombination position?
+    # Use the map to interpolate the recombination position (in Morgans...)
     rec_pos = np.interp(phys_pos, phys_pos_map, rec_pos_map) / 1e2
     node_ids = [s for s in ts.samples()]
     tree = ts.first()
@@ -399,7 +406,7 @@ rule infer_scale_serial_ascertained_ceu_sims:
     hap_panel = rules.create_hap_panel_1kg_ceu_real_chrom.output.hap_panel,
     times_ancient = 'data/hap_copying/chrX_male_analysis/mle_est_real_1kg/ceu_kya_ages.csv'
   wildcard_constraints:
-    scenario = '(SerialConstant|TennessenEuropean|TennessenDoubleGrowthEuropean|TennessenQuadGrowthEuropean|IBDNeUK10K)',
+    scenario = '(SerialConstant|TennessenEuropean|TennessenDoubleGrowthEuropean|TennessenQuadGrowthEuropean|IBDNeUK10K|TennessenEuropeanXchr|IBDNeUK10KXchr)',
     genmap = 'deCODE'
   output:
     mle_hap_est = config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_{genmap}/mle_scale_{mod_n, \d+}_Ne{Ne,\d+}_{seed, \d+}.asc_{asc, \d+}.ta_{ta_samp, \d+}.scale.npz'
@@ -464,7 +471,7 @@ times_gen = np.unique(times_gen)
 
 rule ceu_infer_scale_real_chrom:
   input:
-    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_deCODE/mle_scale_{mod_n}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'IBDNeUK10K'], mod_n=49, Ne=10000, seed=42, asc=[5], ta_samp=times_gen)
+    expand(config['tmpdir'] + 'hap_copying/mle_results_all/{scenario}/ceu_sim_chrX_deCODE/mle_scale_{mod_n}_Ne{Ne}_{seed}.asc_{asc}.ta_{ta_samp}.scale.npz',scenario=['SerialConstant', 'TennessenEuropean', 'IBDNeUK10K', 'TennessenEuropeanXchr','IBDNeUK10KXchr'], mod_n=49, Ne=10000, seed=42, asc=[5], ta_samp=times_gen)
 
 
 rule concatenate_hap_copying_results_chrX_sim:
