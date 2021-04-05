@@ -279,15 +279,16 @@ class SerialMigration(Simulation):
 
 class SerialTennessenModel(Simulation):
     """The Tennessen et al European Demography from the stdPopSim Consortium.
-
+    
+    This version allows you to scale the effective size by 3/4 if needed for the X-chromosome.
     https://github.com/popsim-consortium/stdpopsim/blob/c8b557bbfb38ad4371a818dc30acf0e65f15e182/stdpopsim/catalog/homo_sapiens.py#L304
 
     """
 
-    def __init__(self):
+    def __init__(self, scale=1.0):
         """Initialize the model with fixed parameters."""
         super().__init__()
-        self.Ne = 1e4
+        self.Ne = 1e4 * scale
         generation_time = 25
         T_AF = 148e3 / generation_time
         T_OOA = 51e3 / generation_time
@@ -300,10 +301,10 @@ class SerialTennessenModel(Simulation):
         r_AF = 0.0166
 
         # population sizes
-        N_A = 7310
-        N_AF1 = 14474
-        N_B = 1861
-        N_EU0 = 1032
+        N_A = 7310 * scale
+        N_AF1 = 14474 * scale
+        N_B = 1861 * scale
+        N_EU0 = 1032 * scale
         N_EU1 = N_EU0 / np.exp(-r_EU0 * (T_EU0 - T_EG))
 
         # migration rates
@@ -521,19 +522,19 @@ class SerialIBDNeUK10K(Simulation):
         assert demo_file is not None
         self.demo_file = demo_file
 
-    def _set_demography(self):
-        """Establish the demography."""
+    def _set_demography(self, scale=1.0):
+        """Establish the demography, allowing for a scale parameter"""
         demography = []
         N0 = None
         line_num = 0
         t = 0
         for line in open(self.demo_file, "r+"):
             spltln = line.split()
-            Nt = int(spltln[1])
+            Nt = int(spltln[1]) * scale
             if spltln[2] != "inf":
                 deltat = int(spltln[2])
                 if line_num == 0:
-                    N0 = Nt
+                    N0 = Nt * scale
                 line_num += 1
                 t += deltat
                 demography.append(
