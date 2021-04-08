@@ -279,7 +279,7 @@ class SerialMigration(Simulation):
 
 class SerialTennessenModel(Simulation):
     """The Tennessen et al European Demography from the stdPopSim Consortium.
-    
+
     This version allows you to scale the effective size by 3/4 if needed for the X-chromosome.
     https://github.com/popsim-consortium/stdpopsim/blob/c8b557bbfb38ad4371a818dc30acf0e65f15e182/stdpopsim/catalog/homo_sapiens.py#L304
 
@@ -523,7 +523,7 @@ class SerialIBDNeUK10K(Simulation):
         self.demo_file = demo_file
 
     def _set_demography(self, scale=1.0):
-        """Establish the demography, allowing for a scale parameter"""
+        """Establish the demography, allowing for a scale parameter."""
         demography = []
         N0 = None
         line_num = 0

@@ -104,16 +104,16 @@ class TwoLocusSerialCoalescent(TwoLocusSimulation):
 
     def _simulate(self, **kwargs):
         recomb_map = msp.RecombinationMap.uniform_map(
-            self.loci, self.rec_rate/self.loci, num_loci=self.loci
+            self.loci, self.rec_rate / self.loci, num_loci=self.loci
         )
         ts = msp.simulate(
             Ne=self.Ne,
             samples=self.samples,
             recombination_map=recomb_map,
-            num_replicates=self.reps, 
+            num_replicates=self.reps,
             **kwargs
         )
-        return(ts)
+        return ts
 
 
 class TwoLocusSerialDivergence(TwoLocusSimulation):
@@ -430,11 +430,12 @@ class TwoLocusSerialBottleneck(TwoLocusSimulation):
 
 class TwoLocusTheoryConstant:
     """Theoretical two-locus properties in a model of population-continuity."""
-    def _p100_to_011(rho,ta):
-        return(r * (1.0 - np.exp(-t * (r / 2 + 1))) / (r + 2.))
 
-    def _p011_to_100(rho,ta):
-        return(2. * (1.0 - np.exp(-t * (r / 2 + 1))) / (r + 2.))
+    def _p100_to_011(rho, ta):
+        return rho * (1.0 - np.exp(-ta * (rho / 2 + 1))) / (rho + 2.0)
+
+    def _p011_to_100(rho, ta):
+        return 2.0 * (1.0 - np.exp(-ta * (rho / 2 + 1))) / (rho + 2.0)
 
     def _eTATB(rho, ta):
         u200 = lambda rho: (rho ** 2 + 14 * rho + 36) / (
@@ -466,10 +467,10 @@ class TwoLocusTheoryConstant:
 
     def _covLALB(rho, ta):
         return 4 * (TwoLocusTheoryConstant._corrLALB(rho, ta))
-    
+
     def _covSASB(rho, ta, theta=1.0):
-        return (theta**2)/4. *(TwoLocusTheoryConstant._covLALB(rho, ta))
-    
+        return (theta ** 2) / 4.0 * (TwoLocusTheoryConstant._covLALB(rho, ta))
+
     def _corrSASB(rho, ta, theta=1.0):
         """Correlation in segregating sites."""
         corrSASB = (

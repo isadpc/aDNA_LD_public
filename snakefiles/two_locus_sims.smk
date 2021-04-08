@@ -153,9 +153,9 @@ rule combine_branch_length_est:
     df_final = df_final.dropna()
     df_final.to_csv(str(output), index=False, header=df_final.columns)
 
-    
-    
-    
+
+
+
 # ------- Two Locus Simulations for correlation in mutations ------- #
 def pair_mut(ts_reps, nreps, **kwargs):
     """Computing the paired mutations in set of two-locus simulations"""
@@ -196,14 +196,14 @@ rule sim_two_locus_mutations:
                  corr_piA_piB=corr_mut,
                  nreps=nreps,
                  se_corr_piApiB=se_r_mut, Ne=1.)
-        
-        
+
+
 rule full_two_locus_sims:
     """Generating the full two-locus simulations for the correlation in number of mutations."""
     input:
         expand(config['tmpdir'] + 'two_loci/serial/corrmut_theory/est_{ta}_theta{theta}_{nreps}_seed{seed}_corr_mut.npz', ta=[1000,100,10,0], theta=400, nreps=[1000, 5000, nreps], seed=42)
 
-        
+
 rule collect_two_locus_sims:
   input:
     files = rules.full_two_locus_sims.input
