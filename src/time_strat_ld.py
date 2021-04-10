@@ -8,7 +8,7 @@ class TimeStratifiedLDStats:
     """Class to compute LD statistics in time-stratified samples."""
 
     def joint_ld(
-        haps, gen_pos, times, ta=100, maf=0.001, polymorphic_total=True, **kwargs
+        haps, gen_pos, times, ta=100, maf=0.001, max_dist=0.01, polymorphic_total=True, **kwargs
     ):
         """XXX."""
         assert haps.shape[0] == times.size
@@ -49,8 +49,9 @@ class TimeStratifiedLDStats:
             denom[:, i] = af_mod[i] * (1.0 - af_anc[i]) * af_mod * (1.0 - af_anc)
         # Normalizing the product of LD
         eD0Dt_norm = numerator / denom
-        idx_x, idx_y = np.tril_indices(pos_filt.size, k=-1)
-        return (eD0Dt_norm[idx_x, idx_y], dist[idx_x, idx_y], af_mod, af_anc)
+        # We should grab the maximal distance here ... 
+#         idx = np.where(dist < max_dist)
+        return (eD0Dt_norm[(dist < max_dist)], dist[(dist < max_dist)], af_mod, af_anc)
 
     def joint_r2(haps, gen_pos, times):
         """Calculate r2 in the joint time-stratified setting."""

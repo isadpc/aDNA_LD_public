@@ -38,7 +38,6 @@ rule est_LDjt_stats:
     maf = int(wildcards.maf) / 100.
     haps = haps_df['haps']
     polytot = bool(wildcards.polytot)
-    print(polytot)
     times = haps_df['ta']
     rec_pos = haps_df['rec_pos']
     phys_pos = haps_df['phys_pos']
@@ -52,4 +51,4 @@ rule est_LDjt_stats:
 
 rule run_est_jtLDstats:
   input:
-    expand(config['tmpdir'] + 'ld_stats/{scenario}/jointLDstats_mod{mod_n}_anc{n_anc}_t{ta}_l{length}_Ne{Ne}_{seed}_maf{maf}_polytotal{polytot}.npz', scenario='SerialConstant', ta=[0, 100], mod_n=100, n_anc=100, seed=seeds[:5], length=5, Ne=10000, maf=[1,5], polytot=1)
+    expand(config['tmpdir'] + 'ld_stats/{scenario}/jointLDstats_mod{mod_n}_anc{n_anc}_t{ta}_l{length}_Ne{Ne}_{seed}_maf{maf}_polytotal{polytot}.npz', scenario='SerialConstant', ta=100, mod_n=100, n_anc=100, seed=seeds[0], length=5, Ne=10000, maf=[1,5], polytot=[0,1])
