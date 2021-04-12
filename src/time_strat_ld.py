@@ -115,7 +115,12 @@ class TimeStratifiedLDStats:
         dist = np.zeros((pos_filt.size, pos_filt.size), dtype=np.float32)
         for i in range(pos_filt.size):
           dist[i,:] = np.sqrt((pos_filt[i] - pos_filt)**2)
-        if dist_bins is None:
+        if dist_bins is 'logspaced':
+          # We want to conduct log-spaced binning  now.
+          dist_bins =   np.logspace(np.log10(dist.min()), np.log10(dist.max()), 50)
+        elif dist_bins is 'auto':
+          _, dist_bins = np.histogram(dist, bins='auto')
+        elif dist_bins is None:
           dist_bins = np.linspace(dist.min(), dist.max(), 50)
         assert dist_bins.size > 2
         pABmod = []

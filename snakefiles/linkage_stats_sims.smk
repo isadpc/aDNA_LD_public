@@ -45,7 +45,7 @@ rule est_LDjt_stats_raw:
     seed = haps_df['seed']
     ta = int(wildcards.ta)
     # Actually compute the joint product of LD
-    pABmod, pABanc,pAmod, pAanc, pBmod, pBanc, Dmod, Danc, gen_dist = TimeStratifiedLDStats.time_strat_hap_freq(haps, rec_pos, times, ta=ta, maf=maf, m=10000, polymorphic_total=polytot, seed=seed)
+    pABmod, pABanc,pAmod, pAanc, pBmod, pBanc, Dmod, Danc, gen_dist = TimeStratifiedLDStats.time_strat_hap_freq(haps, rec_pos, times, ta=ta, maf=maf, m=10000, dist_bins='auto', polymorphic_total=polytot, seed=seed)
     # Save the function here ...
     np.savez_compressed(output.ld_stats, pABmod=pABmod, pABanc=pABanc, pAmod=pAmod, pBmod=pBmod, pAanc=pAanc, pBanc=pBanc, Dmod=Dmod, Danc=Danc, rec_dist=gen_dist, ta=ta, scenario=scenario, seed=seed)
 
@@ -72,9 +72,58 @@ rule est_LDjt_stats:
     # Save the function here ...
     np.savez_compressed(output.ld_stats, ed0dt=ed0dt_norm, rec_dist=rec_dist, mod_af=mod_af, anc_af=anc_af, ta=ta, scenario=scenario, seed=seed)
 
-rule run_est_jtLDstats:
+    
+    
+rule run_est_jtLDstats_raw:
   input:
-#     expand(config['tmpdir'] + 'ld_stats/{scenario}/jointLDstats_mod{mod_n}_anc{n_anc}_t{ta}_l{length}_Ne{Ne}_{seed}_maf{maf}_polytotal{polytot}.npz', scenario='SerialConstant', ta=100, mod_n=500, n_anc=500, seed=seeds[0], length=1, Ne=10000, maf=[1,5], polytot=[0,1]),
-#     expand(config['tmpdir'] + 'ld_stats_raw/{scenario}/jointLDstats_mod{mod_n}_anc{n_anc}_t{ta}_l{length}_Ne{Ne}_{seed}_maf{maf}_polytotal{polytot}.npz', scenario='SerialConstant', ta=100, mod_n=100, n_anc=100, seed=seeds[0], length=[1], Ne=10000, maf=[1,5,10], polytot=[0,1]),
-#     expand(config['tmpdir'] + 'ld_stats_raw/{scenario}/jointLDstats_mod{mod_n}_anc{n_anc}_t{ta}_l{length}_Ne{Ne}_{seed}_maf{maf}_polytotal{polytot}.npz', scenario='SerialConstant', ta=100, mod_n=500, n_anc=500, seed=seeds, length=[1], Ne=10000, maf=[5], polytot=[0,1]),
-    expand(config['tmpdir'] + 'ld_stats_raw/{scenario}/jointLDstats_mod{mod_n}_anc{n_anc}_t{ta}_l{length}_Ne{Ne}_{seed}_maf{maf}_polytotal{polytot}.npz', scenario='SerialConstant', ta=[0,100,1000], mod_n=500, n_anc=500, seed=seeds[:10], length=[1], Ne=10000, maf=[5], polytot=[0,1])
+    expand(config['tmpdir'] + 'ld_stats_raw/{scenario}/jointLDstats_mod{mod_n}_anc{n_anc}_t{ta}_l{length}_Ne{Ne}_{seed}_maf{maf}_polytotal{polytot}.npz', scenario='SerialConstant', ta=[0,100,1000], mod_n=500, n_anc=500, seed=seeds[:10], length=1, Ne=10000, maf=[5], polytot=[0,1])
+  
+rule run_est_jtLDstats_alt:
+  input:
+    expand(config['tmpdir'] + 'ld_stats/{scenario}/jointLDstats_mod{mod_n}_anc{n_anc}_t{ta}_l{length}_Ne{Ne}_{seed}_maf{maf}_polytotal{polytot}.npz', scenario='SerialConstant', ta=[0,100,1000], mod_n=500, n_anc=500, seed=seeds[:10], length=1, Ne=10000, maf=[5], polytot=[0,1])
+    
+    
+# ------ Collapsing these estimates into a plottable format ----- #
+rule collapse_raw_stats:
+  input:
+    ldfiles = rules.run_est_jtLDstats_raw.input
+  output:
+     results = 'results/ld_stats_raw/ld_stats_time_sep_raw.csv.gz'
+  run:
+    ed0dt_tot = []
+    rec_dist_tot = []
+    ta_tot = []
+    scenario_tot = []
+    seed_tot = []
+    for f in tqdm(input.ldfiles):
+      df = np.load(f)
+      # Calculate the expected LD statistic 
+      ed0dt = eD0Dt_norm = (df['Dmod']*df['Danc']) / (df['pAmod']*(1.-df['pAanc'])*df['pBmod']*(1. - df['pBanc']))
+      rec_dist = df['rec_dist']
+      assert ed0dt.size == rec_dist.size
+      ta = np.repeat(df['ta'], rec_dist.size)
+      scenario = np.repeat(df['scenario'], rec_dist.size)
+      seed = np.repeat(df['seed'], rec_dist.size)
+      # Append them all!
+      ed0dt_tot.append(ed0dt)
+      rec_dist_tot.append(rec_dist)
+      ta_tot.append(ta)
+      scenario_tot.append(scenario)
+      seed_tot.append(seed)
+    ed0dt_tot = np.hstack(ed0dt_tot)
+    rec_dist_tot = np.hstack(rec_dist_tot)
+    ta_tot = np.hstack(ta_tot)
+    scenario_tot = np.hstack(scenario_tot)
+    seed_tot = np.hstack(seed_tot)
+    tot_dict = {'ed0dt': ed0dt_tot, 'rec_dist': rec_dist_tot, 'ta': ta_tot, 'scenario': scenario_tot, 'seed': seed_tot}
+    df_out = pd.DataFrame(tot_dict)
+    df_out.to_csv(output.results, index=False)
+      
+
+# TODO : we should process using some binning here ...  
+      
+      
+    
+
+
+
