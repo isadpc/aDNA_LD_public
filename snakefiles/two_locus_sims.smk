@@ -11,6 +11,7 @@ from scipy.stats import pearsonr
 # Import all of the functionality that we would need
 sys.path.append('src/')
 from coal_cov import *
+from time_strat_ld import TimeStratifiedLDStats
 
 # Import configurations to add some things
 configfile: "config.yml"
@@ -197,7 +198,6 @@ rule sim_two_locus_mutations:
                  nreps=nreps,
                  se_corr_piApiB=se_r_mut, Ne=1.)
 
-
 rule full_two_locus_sims:
     """Generating the full two-locus simulations for the correlation in number of mutations."""
     input:
@@ -228,3 +228,55 @@ rule collect_two_locus_sims:
     df_final = pd.DataFrame(tot_df, columns=['scenario','ta','seed','rec_rate','corr_piApiB','se_corr_piApiB', 'nreps'])
     df_final = df_final.dropna()
     df_final.to_csv(str(output), index=False, header=df_final.columns)
+
+
+
+# --------- Using two-locus simulations to simulate pairwise mutations --------- #
+rule sim_two_locus_mut_haps:
+    """Simulating the two locus mutations"""
+    output:
+        corr_est = config['tmpdir'] + 'two_loci/serial/ed0dt_norm/est_{ta,\d+}_theta{theta,\d+}_{nreps,\d+}_seed{seed,\d+}_ld_d0dtjt.npz'
+    run:
+        Ne = 1.
+        nreps = int(wildcards.nreps)
+        ta = int(wildcards.ta) / 1000.
+        seed = int(wildcards.seed)
+        rhos = np.logspace(-4,2,50)
+        theta = int(wildcards.theta) / 1000.
+        ed0dt_norm_mean = np.zeros(rhos.size)
+        ed0dt_norm_std = np.zeros(rhos.size)
+        for i,r in tqdm(enumerate(rhos)):
+            cur_ed0dt_norm = []
+            cur_sim = TwoLocusSerialCoalescent(ta=ta, Ne=Ne, rec_rate=r, reps=nreps, na=100, n0=100)
+            ts_reps = cur_sim._simulate(mutation_rate=theta, random_seed=seed+i)
+            for ts in ts_reps:
+              tree = ts.first()
+              times = np.array([tree.time(i) for i in ts.samples()])
+              pos = np.array([v.position for v in ts.variants()])
+              gt = ts.genotype_matrix().T
+              _, _, pAmod, pAanc, pBmod, pBanc, Dmod, Danc, _ = TimeStratifiedLDStats.time_strat_two_locus_haps(gt, pos, times, ta=ta, maf=0.01, polymorphic_total=False)
+              ed0dt_norm = (Dmod*Danc)/(pAmod*(1.-pAanc)*pBmod*(1.-pBanc))
+              cur_ed0dt_norm.append(ed0dt_norm)
+            cur_ed0dt_norm = np.hstack(cur_ed0dt_norm)
+            ed0dt_norm_mean[i] = np.nanmean(cur_ed0dt_norm)
+            ed0dt_norm_std[i] = np.nanstd(cur_ed0dt_norm)
+        print(rhos)
+        print(ed0dt_norm_mean)
+        # Saving the approach here ...
+        np.savez(str(output),
+                 scenario='Two-Locus Theory',
+                 seed=np.int32(wildcards.seed),
+                 rec_rate=rhos,
+                 ta=ta,
+                 theta = theta,
+                 ed0dtnorm=ed0dt_norm,
+                 ed0dtnormstd=ed0dt_norm_std,
+                 nreps=nreps, Ne=1.)
+
+
+rule sim_ld_time_strat_two_locus:
+  input:
+    expand(config['tmpdir'] + 'two_loci/serial/ed0dt_norm/est_{ta}_theta{theta}_{nreps}_seed{seed}_ld_d0dtjt.npz', seed=42, nreps=10, theta=1000, ta=[0,100])
+
+
+
