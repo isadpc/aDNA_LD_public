@@ -120,7 +120,7 @@ rule collapse_raw_stats:
     df_out.to_csv(output.results, index=False)
       
 
-# TODO : we should process using some binning here ...  
+# TODO : we should eventually do some processing actually ...  
       
       
     
