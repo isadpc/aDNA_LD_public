@@ -7,7 +7,6 @@ import pandas as pd
 from tqdm import tqdm
 from scipy.stats import pearsonr
 
-
 # Import all of the functionality that we would need
 sys.path.append('src/')
 from coal_cov import *
@@ -247,15 +246,15 @@ rule sim_two_locus_mut_haps:
         ed0dt_norm_std = np.zeros(rhos.size)
         for i,r in tqdm(enumerate(rhos)):
             cur_ed0dt_norm = []
-            cur_sim = TwoLocusSerialCoalescent(ta=ta, Ne=Ne, rec_rate=r, reps=nreps, na=100, n0=100)
+            cur_sim = TwoLocusSerialCoalescent(ta=ta, Ne=Ne, rec_rate=r, reps=nreps, na=500, n0=500)
             ts_reps = cur_sim._simulate(mutation_rate=theta, random_seed=seed+i)
             for ts in ts_reps:
               tree = ts.first()
               times = np.array([tree.time(i) for i in ts.samples()])
               pos = np.array([v.position for v in ts.variants()])
               gt = ts.genotype_matrix().T
-              _, _, pAmod, pAanc, pBmod, pBanc, Dmod, Danc, _ = TimeStratifiedLDStats.time_strat_two_locus_haps(gt, pos, times, ta=ta, maf=0.01, polymorphic_total=False)
-              ed0dt_norm = (Dmod*Danc)/(pAmod*(1.-pAanc)*pBmod*(1.-pBanc))
+              Dmod, Danc, norm_factor,_ = TimeStratifiedLDStats.time_strat_two_locus_haps(gt, pos, times, ta=ta, maf=0.05, polymorphic_total=False)
+              ed0dt_norm = (Dmod*Danc)/norm_factor
               cur_ed0dt_norm.append(ed0dt_norm)
             cur_ed0dt_norm = np.hstack(cur_ed0dt_norm)
             ed0dt_norm_mean[i] = np.nanmean(cur_ed0dt_norm)
@@ -269,14 +268,16 @@ rule sim_two_locus_mut_haps:
                  rec_rate=rhos,
                  ta=ta,
                  theta = theta,
-                 ed0dtnorm=ed0dt_norm,
+                 ed0dtnorm=ed0dt_norm_mean,
                  ed0dtnormstd=ed0dt_norm_std,
                  nreps=nreps, Ne=1.)
 
 
 rule sim_ld_time_strat_two_locus:
   input:
-    expand(config['tmpdir'] + 'two_loci/serial/ed0dt_norm/est_{ta}_theta{theta}_{nreps}_seed{seed}_ld_d0dtjt.npz', seed=42, nreps=10, theta=1000, ta=[0,100])
+    expand(config['tmpdir'] +
+    'two_loci/serial/ed0dt_norm/est_{ta}_theta{theta}_{nreps}_seed{seed}_ld_d0dtjt.npz',
+    seed=42, nreps=[1], theta=1000, ta=[0])
 
 
 

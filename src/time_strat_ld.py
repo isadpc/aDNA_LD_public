@@ -10,7 +10,7 @@ class TimeStratifiedLDStats:
     def joint_ld(
         haps, gen_pos, times, ta=100, maf=0.001, max_dist=0.01, polymorphic_total=True, **kwargs
     ):
-        """XXX."""
+        """Compute the joint LD statistics here."""
         assert haps.shape[0] == times.size
         assert haps.shape[1] == gen_pos.size
         assert ta >= 0
@@ -230,17 +230,17 @@ class TimeStratifiedLDStats:
         # We have to filter the genotype matrices as well...
         gt_mod = gt_mod[:, af_filt_jt]
         gt_anc = gt_anc[:, af_filt_jt]
-        pABmod = []
-        pABanc = []
-        pAmod = []
-        pBmod = []
-        pAanc = []
-        pBanc = []
-        Danc = []
-        Dmod = []
-        gen_dist = []
         # Get indices that are across loci
-        idx1, idx2 = np.where((dist > 1) & (dist < 2))
+        idx1, idx2 = np.where((dist > 1) & (dist <= 2))
+        pABmod = np.zeros(idx1.size)
+        pABanc = np.zeros(idx1.size)
+        pAmod = np.zeros(idx1.size)
+        pBmod = np.zeros(idx1.size)
+        pAanc = np.zeros(idx1.size)
+        pBanc = np.zeros(idx1.size)
+        Danc = np.zeros(idx1.size)
+        Dmod = np.zeros(idx1.size)
+        gen_dist = np.zeros(idx1.size)
         # sample K haplotype pairs via Monte-Carlo
         for j in range(idx1.size):
             # Choose the same two snps ... 
@@ -259,27 +259,81 @@ class TimeStratifiedLDStats:
             # Calculate the ancient and modern LD statistics ... 
             D_mod = pAB_mod - pA_mod*pB_mod
             D_anc= pAB_anc - pA_anc*pB_anc
-            pABmod.append(pAB_mod)
-            pABanc.append(pAB_anc)
-            pAmod.append(pA_mod)
-            pBmod.append(pB_mod)
-            pAanc.append(pA_anc)
-            pBanc.append(pB_anc)
-            Dmod.append(D_mod)
-            Danc.append(D_anc)
-            gen_dist.append(dist[idx1[j], idx2[j]])
-        # Convert all to numpy arrays
-        pABmod = np.array(pABmod)
-        pABanc = np.array(pABanc)
-        pAmod = np.array(pAmod)
-        pBmod = np.array(pBmod)
-        pAanc = np.array(pAanc)
-        pBanc = np.array(pBanc)
-        Dmod = np.array(Dmod)
-        Danc = np.array(Danc)
-        gen_dist = np.array(gen_dist)
+            pABmod[j] = pAB_mod
+            pABanc[j] = pAB_anc
+            pAmod[j] = pA_mod
+            pBmod[j] = pB_mod
+            pAanc[j] = pA_anc
+            pBanc[j] = pB_anc
+            Dmod[j] = D_mod
+            Danc[j] = D_anc
+            gen_dist[j] = dist[idx1[j], idx2[j]]
         # Make sure all the positions are positive numbers
         assert np.all(gen_dist >= 0)
         # Return all of the statistics as numpy arrays
         return(pABmod, pABanc,pAmod, pAanc, pBmod, pBanc, Dmod, Danc, gen_dist)
+
+    def time_strat_two_locus_haps_fast(haps, gen_pos, times, ta=0.1, maf=0.001, polymorphic_total=True, **kwargs):
+        """Calculate standardized haplotype frequencies across two loci.
+        
+        Arguments:
+        ----------
+        
+        * haps: (np.array) - a N x M array of haplotypes
+        * gen_pos: (np.array) - length M vectors of genetic positions
+        * times: (np.array) - length N vector of times for each haploid sequencing
+        * ta: (int) - timepoint for ancient simulations
+        * maf: (float) - minimum minor allele frequency here
+        * polymorphic_total: (bool)
+        
+        Returns:
+        --------
+        
+        """
+        assert haps.shape[0] == times.size
+        assert haps.shape[1] == gen_pos.size
+        assert ta >= 0
+        assert haps.shape[0] % 2 == 0
+        assert (maf >= 0) and (maf < 0.5)
+        if ta == 0:
+          x = int(haps.shape[0]/2)
+          mod_idx = np.arange(x)
+          anc_idx = np.arange(x, haps.shape[0])
+        else:
+          mod_idx = np.where(times == 0)[0]
+          anc_idx = np.where(times == ta)[0]
+        gt_mod = haps[mod_idx, :]
+        af_mod = np.mean(gt_mod, axis=0)
+        gt_anc = haps[anc_idx, :]
+        af_anc = np.mean(gt_anc, axis=0)
+        gt_tot = np.vstack([gt_mod, gt_anc])
+        af_tot = np.mean(gt_tot, axis=0)
+        if polymorphic_total:
+            af_filt_jt = (af_tot > maf) & (af_tot < 1.0 - maf)
+        else:
+            af_filt_jt = (
+                (af_mod > maf)
+                & (af_anc > maf)
+                & (af_mod < 1.0 - maf)
+                & (af_anc < 1.0 - maf)
+            )
+        # Perform some filtering using the MAF filters ...
+        pos_filt = gen_pos[af_filt_jt]
+        dist = np.zeros((pos_filt.size, pos_filt.size), dtype=np.float32)
+        for i in range(pos_filt.size):
+          dist[i,:] = np.sqrt((pos_filt[i] - pos_filt)**2)
+        # We have to filter the genotype matrices as well...
+        gt_mod = gt_mod[:, af_filt_jt]
+        gt_anc = gt_anc[:, af_filt_jt]
+        # Get indices that are across loci
+        idx1, idx2 = np.where((dist > 1) & (dist <= 2))
+        gen_dist = dist[idx1, idx2]
+        Dmod = np.cov(gt_mod.T, **kwargs)[idx1, idx2]
+        Danc = np.cov(gt_anc.T, **kwargs)[idx1, idx2]
+        print(Dmod.shape, Danc.shape)
+        norm_factor = af_mod[idx1]*(1. - af_anc[idx1])*af_mod[idx2]*(1.-af_anc[idx2]) 
           
+        assert np.all(gen_dist >= 0)
+        # Return all of the statistics as numpy arrays
+        return(Dmod, Danc, norm_factor, gen_dist)
+    
