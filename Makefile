@@ -12,3 +12,6 @@ docs/%.html: notebooks/%.ipynb
 		--output-dir $(dir $@)\
 		--template classic\
 
+# TODO : get the automatic running of notebooks to work...
+#notebooks/*.ipynb:
+#    jupyter nbconvert --execute --to notebook --inplace $@
