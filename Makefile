@@ -12,6 +12,36 @@ docs/%.html: notebooks/%.ipynb
 		--output-dir $(dir $@)\
 		--template classic\
 
-# TODO : get the automatic running of notebooks to work...
-#notebooks/*.ipynb:
-#    jupyter nbconvert --execute --to notebook --inplace $@
+
+#1. Main analysis notebooks
+corr_piA_piB_real_data:
+	jupyter nbconvert --to notebook\
+	 --execute --inplace notebooks/main_analyses/corr_piA_piB_real_data.ipynb
+
+demography_copying_rate:
+	jupyter nbconvert --to notebook\
+	 --execute --inplace notebooks/main_analyses/demography_copying_rate.ipynb
+
+gen_corrbl_tables:
+	jupyter nbconvert --to notebook\
+	 --execute --inplace notebooks/main_analyses/gen_corrbl_tables.ipynb
+
+joint_ldstats:
+	jupyter nbconvert --to notebook\
+	 --execute --inplace notebooks/main_analyses/joint_LDstats.ipynb
+
+reich1240k_analysis:
+	jupyter nbconvert --to notebook\
+	 --execute --inplace notebooks/main_analyses/reich_1240k_analysis.ipynb
+
+two_locus_adna:
+	jupyter nbconvert --to notebook\
+	 --execute --inplace notebooks/main_analyses/two_locus_adna.ipynb
+
+two_locus_demographic:
+	jupyter nbconvert --to notebook\
+	 --execute --inplace notebooks/main_analyses/two_locus_demographic.ipynb
+
+main_analyses: corr_piA_piB_real_data demography_copying_rate gen_corrbl_tables joint_ldstats two_locus_adna two_locus_demographic
+
+#2. Supplementary Analysis notebooks

@@ -56,5 +56,5 @@ The `src` directory contains implementations of:
 
 * Matthias Steinruecken
 * John Novembre
-* Novembre & Steinrucken & Berg Labs @ UChicago 
-* NIH GRTG 
+* Novembre & Steinrucken & Berg Labs @ UChicago
+* NIH GRTG

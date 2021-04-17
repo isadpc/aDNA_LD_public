@@ -278,6 +278,3 @@ rule sim_ld_time_strat_two_locus:
     expand(config['tmpdir'] +
     'two_loci/serial/ed0dt_norm/est_{ta}_theta{theta}_{nreps}_seed{seed}_ld_d0dtjt.npz',
     seed=42, nreps=[1], theta=1000, ta=[0])
-
-
-

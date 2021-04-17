@@ -50,12 +50,11 @@ class TwoLocusSimulation:
         self.pair_tmrca = self.pair_tmrca / (2.0 * self.Ne)
         self.treeseq = None
 
-    def _two_locus_branch_length(self, scale=False):
+    def _two_locus_branch_length(self, ts_reps, scale=False):
         """Calculate the total tree length at each locus."""
-        assert self.treeseq is not None
         pair_branch_length = np.zeros(shape=(self.reps, 2))
         i = 0
-        for ts in self.treeseq:
+        for ts in ts_reps:
             # NOTE : using the tskit approach here because it is coded in c
             cur_bl = ts.segregating_sites(mode="branch", windows="trees")
             cur_bl = np.tile(cur_bl, 2)
@@ -65,8 +64,6 @@ class TwoLocusSimulation:
         self.pair_branch_length = pair_branch_length
         if scale:
             self.pair_branch_length = self.pair_branch_length / (2.0 * self.Ne)
-        # reset the iterator
-        self.treeseq = None
 
 
 class TwoLocusSerialCoalescent(TwoLocusSimulation):

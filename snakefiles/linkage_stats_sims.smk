@@ -68,7 +68,7 @@ rule sim_demography_single_ancients_ldstats:
     times = np.array([tree.time(x) for x in node_ids])
     np.savez_compressed(output.hap_panel, haps=geno, rec_pos=rec_pos, phys_pos=phys_pos, ta=times, scenario=scenario, seed=seed)
 
-    
+
 rule est_LDjt_stats_raw:
   """Estimate the raw haplotype frequencies."""
   input:
@@ -113,7 +113,7 @@ rule est_LDjt_stats_raw:
 #     # Save the function here ...
 #     np.savez_compressed(output.ld_stats, ed0dt=ed0dt_norm, rec_dist=rec_dist, mod_af=mod_af, anc_af=anc_af, ta=ta, scenario=scenario, seed=seed)
 
-    
+
 
 rule run_est_jtLDstats_raw:
   input:
@@ -121,7 +121,7 @@ rule run_est_jtLDstats_raw:
             'ld_stats_raw/{scenario}/jointLDstats_mod{mod_n}_anc{n_anc}_t{ta}_l{length}_Ne{Ne}_{seed}_maf{maf}_polytotal{polytot}.npz',
             scenario='SerialConstant', ta=[0,100,1000], mod_n=500, n_anc=500,
             seed=seeds[10:], length=1, Ne=10000, maf=[5], polytot=[1])
-  
+
 # ------ Collapsing these estimates into a plottable format ----- #
 rule collapse_raw_stats:
   input:
@@ -137,7 +137,7 @@ rule collapse_raw_stats:
     seed_tot = []
     for f in tqdm(input.ldfiles):
       df = np.load(f)
-      # Calculate the expected LD statistic 
+      # Calculate the expected LD statistic
       ed0dt = eD0Dt_norm = (df['Dmod']*df['Danc']) / (df['pAmod']*(1.-df['pAanc'])*df['pBmod']*(1. - df['pBanc']))
       rec_dist = df['rec_dist']
       _, bins = np.histogram(rec_dist, bins='auto')
@@ -162,8 +162,7 @@ rule collapse_raw_stats:
     ta_tot = np.hstack(ta_tot)
     scenario_tot = np.hstack(scenario_tot)
     seed_tot = np.hstack(seed_tot)
-    
+
     tot_dict = {'ed0dt': ed0dt_tot, 'std_ed0dt': std_ed0dt_tot, 'rec_dist': rec_dist_tot, 'ta': ta_tot, 'scenario': scenario_tot, 'seed': seed_tot}
     df_out = pd.DataFrame(tot_dict)
     df_out.to_csv(output.results, index=False)
-    
