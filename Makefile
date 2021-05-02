@@ -16,7 +16,7 @@ docs/%.html: notebooks/%.ipynb
 all_analyses: main_analyses supp_analyses
 
 #1. Main analysis notebooks
-main_analyses: corr_piA_piB_real_data demography_copying_rate gen_corrbl_tables joint_ldstats two_locus_adna two_locus_demographic
+main_analyses: corr_piA_piB_real_data demography_copying_rate joint_ldstats two_locus_adna two_locus_demographic
 
 corr_piA_piB_real_data:
 	jupyter nbconvert --to notebook\
