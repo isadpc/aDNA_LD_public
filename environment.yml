@@ -21,3 +21,4 @@ dependencies:
     - tqdm
     - patsy
     - statsmodels
+    - geopy
