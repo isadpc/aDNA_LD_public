@@ -13592,16 +13592,133 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
+<div class="prompt input_prompt">In&nbsp;[32]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Comparing the estimates across the mean-averaged versions</span>
+<span class="n">test_ceu_1kg</span> <span class="o">=</span> <span class="n">pop_1kg_df</span><span class="p">[</span><span class="n">pop_1kg_df</span><span class="p">[</span><span class="s1">&#39;pop&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;CEU&#39;</span><span class="p">][</span><span class="s1">&#39;sample&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+<span class="n">anc_ids</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;LBK&#39;</span><span class="p">,</span> <span class="s1">&#39;UstIshim&#39;</span><span class="p">,</span> <span class="s1">&#39;NA06984&#39;</span><span class="p">]</span>
+
+<span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="s1">&#39;orange&#39;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">]</span>
+<span class="n">corr_piA_piB_dict</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">anc_ids</span><span class="p">:</span>
+    <span class="c1"># Getting the </span>
+    <span class="n">cur_df_test</span> <span class="o">=</span> <span class="n">rec_rate_corr_piA_piB</span><span class="p">[(</span><span class="n">rec_rate_corr_piA_piB</span><span class="o">.</span><span class="n">ANC_ID</span> <span class="o">==</span> <span class="n">a</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">rec_rate_corr_piA_piB</span><span class="o">.</span><span class="n">MOD_ID</span><span class="p">,</span><span class="n">test_ceu_1kg</span><span class="p">))]</span>
+    <span class="n">rec_rate_mean</span> <span class="o">=</span> <span class="p">[</span><span class="n">df_region</span><span class="o">.</span><span class="n">rec_rate_mean</span><span class="o">.</span><span class="n">values</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">df_region</span> <span class="ow">in</span> <span class="n">cur_df_test</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;MOD_ID&#39;</span><span class="p">)]</span>
+    <span class="n">corr_piA_piB</span> <span class="o">=</span> <span class="p">[</span><span class="n">df_region</span><span class="o">.</span><span class="n">corr_piA_piB</span><span class="o">.</span><span class="n">values</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">df_region</span> <span class="ow">in</span> <span class="n">cur_df_test</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;MOD_ID&#39;</span><span class="p">)]</span>
+    <span class="n">mean_rec_rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">rec_rate_mean</span><span class="p">)</span>
+    <span class="n">mean_corr_s1_s2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">corr_piA_piB</span><span class="p">)</span>
+    <span class="n">corr_piA_piB_dict</span><span class="p">[</span><span class="n">a</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">mean_corr_s1_s2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+     
+<span class="n">collapsed_rows</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">corr_piA_piB_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">corr_piA_piB_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">j</span> <span class="o">!=</span> <span class="n">k</span><span class="p">:</span> 
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">pval_wilcoxon</span> <span class="o">=</span> <span class="n">sign_test_corr_piA_piB</span><span class="p">(</span><span class="n">corr_piA_piB_dict</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">corr_piA_piB_dict</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">test</span><span class="o">=</span><span class="s1">&#39;wilcoxon&#39;</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">stat</span><span class="p">,</span> <span class="n">pval_binom</span> <span class="o">=</span> <span class="n">sign_test_corr_piA_piB</span><span class="p">(</span><span class="n">corr_piA_piB_dict</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">corr_piA_piB_dict</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">test</span><span class="o">=</span><span class="s1">&#39;binom&#39;</span><span class="p">)</span>
+            <span class="n">cur_row</span> <span class="o">=</span> <span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">pval_wilcoxon</span><span class="p">,</span> <span class="n">pval_binom</span><span class="p">]</span>
+            <span class="n">collapsed_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cur_row</span><span class="p">)</span>
+            
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">collapsed_rows</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;ID1&#39;</span><span class="p">,</span> <span class="s1">&#39;ID2&#39;</span><span class="p">,</span> <span class="s1">&#39;p-value (Wilcoxon)&#39;</span><span class="p">,</span> <span class="s1">&#39;p-value (Binomial)&#39;</span><span class="p">]</span>
+<span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;../../results/corr_seg_sites/pvals_mean_LBK_UstIshim_CEU_1kg_indivs.csv&#39;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">df</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[32]:</div>
+
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>ID1</th>
+      <th>ID2</th>
+      <th>p-value (Wilcoxon)</th>
+      <th>p-value (Binomial)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>UstIshim</td>
+      <td>LBK</td>
+      <td>0.705129</td>
+      <td>3.615946e-01</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>NA06984</td>
+      <td>LBK</td>
+      <td>0.000003</td>
+      <td>1.862645e-09</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>LBK</td>
+      <td>UstIshim</td>
+      <td>0.705129</td>
+      <td>3.615946e-01</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>NA06984</td>
+      <td>UstIshim</td>
+      <td>0.000003</td>
+      <td>1.862645e-09</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
 <div class="prompt input_prompt">In&nbsp;[10]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">collapsed_rows</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">test_indivs_1kg</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">sampID</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">test_indivs_1kg</span><span class="p">):</span>
     <span class="n">pop</span> <span class="o">=</span> <span class="n">pop_1kg_df</span><span class="p">[</span><span class="n">pop_1kg_df</span><span class="p">[</span><span class="s1">&#39;sample&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">sampID</span><span class="p">][</span><span class="s1">&#39;pop&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">filt_df</span> <span class="o">=</span> <span class="n">rec_rate_corr_piA_piB</span><span class="p">[</span><span class="n">rec_rate_corr_piA_piB</span><span class="p">[</span><span class="s1">&#39;MOD_ID&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">sampID</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">filt_df</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">df1</span> <span class="o">=</span> <span class="n">filt_df</span><span class="p">[</span><span class="n">filt_df</span><span class="o">.</span><span class="n">ANC_ID</span> <span class="o">==</span> <span class="s1">&#39;LBK&#39;</span><span class="p">]</span>
         <span class="n">df2</span> <span class="o">=</span> <span class="n">filt_df</span><span class="p">[</span><span class="n">filt_df</span><span class="o">.</span><span class="n">ANC_ID</span> <span class="o">==</span> <span class="s1">&#39;UstIshim&#39;</span><span class="p">]</span>
+
         <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">pval_wilcoxon</span> <span class="o">=</span> <span class="n">sign_test_corr_piA_piB</span><span class="p">(</span><span class="n">df1</span><span class="p">[</span><span class="s1">&#39;corr_piA_piB&#39;</span><span class="p">],</span> <span class="n">df2</span><span class="p">[</span><span class="s1">&#39;corr_piA_piB&#39;</span><span class="p">],</span> <span class="n">test</span><span class="o">=</span><span class="s1">&#39;wilcoxon&#39;</span><span class="p">)</span>
         <span class="n">_</span><span class="p">,</span> <span class="n">stat</span><span class="p">,</span> <span class="n">pval_binom</span> <span class="o">=</span> <span class="n">sign_test_corr_piA_piB</span><span class="p">(</span><span class="n">df1</span><span class="p">[</span><span class="s1">&#39;corr_piA_piB&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">df2</span><span class="p">[</span><span class="s1">&#39;corr_piA_piB&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="s1">&#39;binom&#39;</span><span class="p">)</span>
         <span class="n">cur_row</span> <span class="o">=</span> <span class="p">[</span><span class="n">sampID</span><span class="p">,</span> <span class="n">pop</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">pval_wilcoxon</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">pval_binom</span><span class="p">,</span><span class="mi">5</span><span class="p">)]</span>
@@ -13629,7 +13746,29 @@ div#notebook {
 
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 12/12 [00:00&lt;00:00, 214.08it/s]
+<pre>100%|██████████| 12/12 [00:00&lt;00:00, 87.03it/s]</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>[&#39;NA18486&#39; &#39;NA18488&#39; &#39;NA18489&#39; &#39;NA18525&#39; &#39;NA18526&#39; &#39;NA18528&#39; &#39;NA06984&#39;
+ &#39;NA06985&#39; &#39;NA06986&#39; &#39;NA20845&#39; &#39;NA20846&#39; &#39;NA20847&#39;]
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>
 </pre>
 </div>
 </div>
@@ -13752,6 +13891,186 @@ div#notebook {
     </tr>
   </tbody>
 </table>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[11]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">test_indivs_ceu</span> <span class="o">=</span> <span class="n">rec_rate_corr_piA_piB</span><span class="p">[(</span><span class="n">rec_rate_corr_piA_piB</span><span class="p">[</span><span class="s1">&#39;ANC_ID&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;NA06984&#39;</span><span class="p">)][</span><span class="s1">&#39;MOD_ID&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[12]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">collapsed_rows</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="c1"># print(test_indivs_ceu)</span>
+<span class="k">for</span> <span class="n">sampID</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">test_indivs_ceu</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">sampID</span> <span class="o">!=</span> <span class="s1">&#39;NA06984&#39;</span><span class="p">:</span>
+        <span class="n">pop</span> <span class="o">=</span> <span class="n">pop_1kg_df</span><span class="p">[</span><span class="n">pop_1kg_df</span><span class="p">[</span><span class="s1">&#39;sample&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">sampID</span><span class="p">][</span><span class="s1">&#39;pop&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">filt_df</span> <span class="o">=</span> <span class="n">rec_rate_corr_piA_piB</span><span class="p">[</span><span class="n">rec_rate_corr_piA_piB</span><span class="p">[</span><span class="s1">&#39;MOD_ID&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">sampID</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">filt_df</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">df1</span> <span class="o">=</span> <span class="n">filt_df</span><span class="p">[</span><span class="n">filt_df</span><span class="o">.</span><span class="n">ANC_ID</span> <span class="o">==</span> <span class="s1">&#39;NA06984&#39;</span><span class="p">]</span>
+            <span class="n">df2</span> <span class="o">=</span> <span class="n">filt_df</span><span class="p">[</span><span class="n">filt_df</span><span class="o">.</span><span class="n">ANC_ID</span> <span class="o">==</span> <span class="s1">&#39;UstIshim&#39;</span><span class="p">]</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">pval_wilcoxon</span> <span class="o">=</span> <span class="n">sign_test_corr_piA_piB</span><span class="p">(</span><span class="n">df1</span><span class="p">[</span><span class="s1">&#39;corr_piA_piB&#39;</span><span class="p">],</span> <span class="n">df2</span><span class="p">[</span><span class="s1">&#39;corr_piA_piB&#39;</span><span class="p">],</span> <span class="n">test</span><span class="o">=</span><span class="s1">&#39;wilcoxon&#39;</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">stat</span><span class="p">,</span> <span class="n">pval_binom</span> <span class="o">=</span> <span class="n">sign_test_corr_piA_piB</span><span class="p">(</span><span class="n">df1</span><span class="p">[</span><span class="s1">&#39;corr_piA_piB&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">df2</span><span class="p">[</span><span class="s1">&#39;corr_piA_piB&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="s1">&#39;binom&#39;</span><span class="p">)</span>
+            <span class="n">cur_row</span> <span class="o">=</span> <span class="p">[</span><span class="n">sampID</span><span class="p">,</span> <span class="n">pop</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">pval_wilcoxon</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">pval_binom</span><span class="p">,</span><span class="mi">5</span><span class="p">)]</span>
+            <span class="n">collapsed_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cur_row</span><span class="p">)</span>
+
+<span class="c1"># testing this?</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">collapsed_rows</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Sample ID&#39;</span><span class="p">,</span> <span class="s1">&#39;Population&#39;</span><span class="p">,</span><span class="s1">&#39;p-value (Wilcoxon)&#39;</span><span class="p">,</span> <span class="s1">&#39;p-value (Binomial)&#39;</span><span class="p">]</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;Population&#39;</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;../../results/corr_seg_sites/pvals_NA06984_UstIshim_1kg_indivs.csv&#39;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">df</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>100%|██████████| 99/99 [00:00&lt;00:00, 180.64it/s]
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[12]:</div>
+
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Sample ID</th>
+      <th>Population</th>
+      <th>p-value (Wilcoxon)</th>
+      <th>p-value (Binomial)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>NA06985</td>
+      <td>CEU</td>
+      <td>0.00001</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>NA12748</td>
+      <td>CEU</td>
+      <td>0.01790</td>
+      <td>0.01612</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>NA12718</td>
+      <td>CEU</td>
+      <td>0.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>NA12717</td>
+      <td>CEU</td>
+      <td>0.00012</td>
+      <td>0.00006</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>NA12716</td>
+      <td>CEU</td>
+      <td>0.00005</td>
+      <td>0.00032</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>NA11932</td>
+      <td>CEU</td>
+      <td>0.00011</td>
+      <td>0.00001</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>NA11931</td>
+      <td>CEU</td>
+      <td>0.00002</td>
+      <td>0.00001</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>NA11930</td>
+      <td>CEU</td>
+      <td>0.00123</td>
+      <td>0.00143</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>NA11919</td>
+      <td>CEU</td>
+      <td>0.00123</td>
+      <td>0.00522</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>NA12890</td>
+      <td>CEU</td>
+      <td>0.00003</td>
+      <td>0.00006</td>
+    </tr>
+  </tbody>
+</table>
+<p>98 rows × 4 columns</p>
 </div>
 </div>
 

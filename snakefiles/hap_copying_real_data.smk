@@ -150,7 +150,7 @@ rule estimate_jump_rate_sample_real_1kg:
       f = lambda x : -ls_model._negative_logll(test_hap, scale=x, eps=1e-2)
       _, se_finite_diff = calc_se_finite_diff(f, scale_inf_res.x)
       # NOTE: We initialize the x0 using the marginal solution for the scale?
-      mle_params = ls_model._infer_params(test_hap, x0=[scales[min_idx], 1e-3], bounds=[(1e1,1e6),(1e-6,0.5)], tol=1e-3)
+      mle_params = ls_model._infer_params(test_hap, x0=[scale_inf_res.x, 1e-3], bounds=[(1e1,1e6),(1e-6,0.5)], tol=1e-3)
       cur_params = np.array([np.nan,np.nan])
       se_params = np.array([np.nan,np.nan])
       if mle_params['success']:
