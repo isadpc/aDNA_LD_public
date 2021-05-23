@@ -20,8 +20,8 @@ from aDNA_coal_sim import *
 configfile: "config.yml"
 
 def ascertain_variants(hap_panel, pos, maf=0.05):
-    """Ascertaining variants based on frequency."""
-    assert((maf < 0.5) & (maf > 0))
+    """Ascertaining variants based on a minor allele frequency threshold."""
+    assert((maf <= 0.5) & (maf >= 0))
     mean_daf = np.mean(hap_panel, axis=0)
     idx = np.where((mean_daf > maf) | (mean_daf < (1. - maf)))[0]
     asc_panel = hap_panel[:,idx]
@@ -30,7 +30,6 @@ def ascertain_variants(hap_panel, pos, maf=0.05):
 
 
 # ------- 1. Generate a modern haplotype panel from ChrX using the deCODE map ------- #
-# - TODO : should we implement ascertainment as well.
 rule gen_hap_panel_real_map:
   input:
     recmap = config['recmaps']['deCODE']['chrX']
@@ -62,19 +61,25 @@ rule gen_hap_panel_real_map:
 
 
 # ------- 2. Simulating & Inferring from the LS model ------ #
+# - TODO : should we implement ascertainment as well 
 rule infer_scale_real_map:
   input:
     hap_panel = rules.gen_hap_panel_real_map.output.hap_panel
   output:
-    scale_inf = config['tmpdir'] + 'ls_verify/results/samp_{n,\d+}.scale_{scale_min,\d+}_{scale_max,\d+}.seed{seed,\d+}.rep{rep,\d+}.npz'
+    scale_inf = config['tmpdir'] + 'ls_verify/results/samp_{n,\d+}.scale_{scale_min,\d+}_{scale_max,\d+}.seed{seed,\d+}.asc{maf,\d+}.rep{rep,\d+}.npz'
   run:
     scale_min, scale_max = int(wildcards.scale_min), int(wildcards.scale_max)
+    maf = int(wildcards.maf)/100.
     assert(scale_min < scale_max)
     assert(scale_min % 100 == 0)
     assert(scale_max % 100 == 0)
     scales_true = np.arange(scale_min, scale_max, 100)
     df = np.load(input.hap_panel)
-    ls_model = LiStephensHMM(df['haps'], df['rec_pos'])
+    haps = df['haps']
+    rec_pos = df['rec_pos']
+    # Ascertaining the reference panel for simulations 
+    asc_haps, asc_pos, idx = ascertain_variants(haps, rec_pos, maf=maf)
+    ls_model = LiStephensHMM(asc_haps, asc_pos)
     # Setting up the test haplotypes
     test_haps = [ls_model._sim_haplotype(scale=s, eps=1e-2, seed=int(wildcards.seed))[0] for s in scales_true]
     # Setting result directories ...
@@ -86,6 +91,7 @@ rule infer_scale_real_map:
     # Iterate through all of these sequentially
     for i in tqdm(range(scales_true.size)):
       scales = np.logspace(2,6,30)
+      # evaluating the negative log-likelihood to find a minimal index with eps = 1e-2
       neg_log_lls = np.array([ls_model._negative_logll(test_haps[i], scale=s, eps=1e-2) for s in tqdm(scales)])
       min_idx = np.argmin(neg_log_lls)
       scales_bracket = (1., scales[min_idx]+1.0)
@@ -93,13 +99,15 @@ rule infer_scale_real_map:
       res = ls_model._infer_scale(test_haps[i], eps=1e-2, method='Brent', bracket=scales_bracket, tol=1e-3, options={'disp':3})
       scales_marg_hat[i] = res.x
       # Inferring the joint values (initialize at the marginal here ...)
-      res_jt = ls_model._infer_params(test_haps[i], x0=[res.x,1e-3], bounds=[(1.,1e6), (1e-3,0.5)], tol=1e-3)
+      res_jt = ls_model._infer_params(test_haps[i], x0=[res.x,1e-3], bounds=[(1.,1e6), (1e-4,0.5)], tol=1e-3)
       scales_jt_hat[i] = res_jt.x[0]
       eps_jt_hat[i] = res_jt.x[1]
       se_scales_jt_hat[i] = np.sqrt(res_jt.hess_inv.todense()[0,0])
       se_eps_jt_hat[i] = np.sqrt(res_jt.hess_inv.todense()[1,1])
+    print("Completed estimation of parameters ")
     # Saving the output file
-    np.savez(output.scale_inf,
+    np.savez_compressed(output.scale_inf,
+             nsnps=asc_pos.size,
              scales_true=scales_true,
              scales_marg_hat=scales_marg_hat,
              scales_jt_hat=scales_jt_hat,
@@ -108,47 +116,50 @@ rule infer_scale_real_map:
              se_eps_jt_hat=se_eps_jt_hat)
 
 
-# ------- 3. Combine all of the estimates into a spreadsheet -------- #
-rule combine_ls_verify:
-  input:
-    data = lambda wildcards: expand(config['tmpdir'] + 'ls_verify/results/samp_{n}.scale_{scale_min}_{scale_max}.seed{seed}.rep{rep}.npz', n=wildcards.n, rep=np.arange(20), scale_min=100, scale_max=1000, seed=42)
-  output:
-    csv = 'results/ls_verify/ls_simulations_{n,\d+}.csv'
-  run:
-    # Read through all of the sim results and concatenate
-    scales_true = []
-    scales_marg_hat = []
-    scales_jt_hat = []
-    eps_jt_hat = []
-    se_scales_jt_hat = []
-    se_eps_jt_hat = []
-    for f in input.data:
-      df = np.load(f)
-      scales_true.append(df['scales_true'])
-      scales_marg_hat.append(df['scales_marg_hat'])
-      scales_jt_hat.append(df['scales_jt_hat'])
-      eps_jt_hat.append(df['eps_jt_hat'])
-      se_scales_jt_hat.append(df['se_scales_jt_hat'])
-      se_eps_jt_hat.append(df['se_eps_jt_hat'])
-    # concatenate all of the numpy arrays
-    scales_true = np.hstack(scales_true)
-    scales_marg_hat = np.hstack(scales_marg_hat)
-    scales_jt_hat = np.hstack(scales_jt_hat)
-    eps_jt_hat = np.hstack(eps_jt_hat)
-    se_scales_jt_hat = np.hstack(se_scales_jt_hat)
-    se_eps_jt_hat = np.hstack(se_eps_jt_hat)
-    # Make it into a dataframe
-    d = {'scales_true': scales_true,
-         'scales_marg_hat':scales_marg_hat,
-         'scales_jt_hat':scales_jt_hat,
-         'eps_jt_hat':eps_jt_hat,
-         'se_scales_jt_hat':se_scales_jt_hat,
-         'se_eps_jt_hat': se_eps_jt_hat}
-    df = pd.DataFrame(d)
-    df.to_csv(output.csv, index=False)
+rule test:
+    input:
+        expand(config['tmpdir'] + 'ls_verify/results/samp_{n}.scale_{scale_min}_{scale_max}.seed{seed}.asc{maf}.rep{rep}.npz', seed=42, rep=0, n=100, scale_min=100, scale_max=1000, maf=[0,1,5,10])
+
+# # ------- 3. Combine all of the estimates into a spreadsheet -------- #
+# rule combine_ls_verify:
+#   input:
+#     data = lambda wildcards: expand(config['tmpdir'] + 'ls_verify/results/samp_{n}.scale_{scale_min}_{scale_max}.seed{seed}.rep{rep}.npz', n=wildcards.n, rep=np.arange(20), scale_min=100, scale_max=1000, seed=42)
+#   output:
+#     csv = 'results/ls_verify/ls_simulations_{n,\d+}.csv'
+#   run:
+#     # Read through all of the sim results and concatenate
+#     scales_true = []
+#     scales_marg_hat = []
+#     scales_jt_hat = []
+#     eps_jt_hat = []
+#     se_scales_jt_hat = []
+#     se_eps_jt_hat = []
+#     for f in input.data:
+#       df = np.load(f)
+#       scales_true.append(df['scales_true'])
+#       scales_marg_hat.append(df['scales_marg_hat'])
+#       scales_jt_hat.append(df['scales_jt_hat'])
+#       eps_jt_hat.append(df['eps_jt_hat'])
+#       se_scales_jt_hat.append(df['se_scales_jt_hat'])
+#       se_eps_jt_hat.append(df['se_eps_jt_hat'])
+#     # concatenate all of the numpy arrays
+#     scales_true = np.hstack(scales_true)
+#     scales_marg_hat = np.hstack(scales_marg_hat)
+#     scales_jt_hat = np.hstack(scales_jt_hat)
+#     eps_jt_hat = np.hstack(eps_jt_hat)
+#     se_scales_jt_hat = np.hstack(se_scales_jt_hat)
+#     se_eps_jt_hat = np.hstack(se_eps_jt_hat)
+#     # Make it into a dataframe
+#     d = {'scales_true': scales_true,
+#          'scales_marg_hat':scales_marg_hat,
+#          'scales_jt_hat':scales_jt_hat,
+#          'eps_jt_hat':eps_jt_hat,
+#          'se_scales_jt_hat':se_scales_jt_hat,
+#          'se_eps_jt_hat': se_eps_jt_hat}
+#     df = pd.DataFrame(d)
+#     df.to_csv(output.csv, index=False)
 
 
-
-rule full_verify:
-  input:
-    expand('results/ls_verify/ls_simulations_{n}.csv', n=[100])
+# rule full_verify:
+#   input:
+#     expand('results/ls_verify/ls_simulations_{n}.csv', n=[100])
