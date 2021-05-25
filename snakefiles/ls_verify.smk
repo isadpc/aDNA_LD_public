@@ -183,4 +183,4 @@ rule combine_ls_verify:
 
 rule full_verify:
   input:
-    expand('results/ls_verify/ls_simulations_{n}_thinned.csv', n=[100,49])
+    expand('results/ls_verify/ls_simulations_{n}_thinned.csv', n=[49])
