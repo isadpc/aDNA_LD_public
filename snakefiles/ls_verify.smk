@@ -6,8 +6,6 @@ import os
 import sys
 import numpy as np
 import msprime as msp
-import tszip
-import allel
 import pandas as pd
 from tqdm import tqdm
 
@@ -109,6 +107,7 @@ rule infer_scale_real_map:
     print("Completed estimation of parameters!")
     # Saving the output file
     np.savez_compressed(output.scale_inf,
+             thin=int(wildcards.thin),
              nsnps=asc_pos.size,
              min_gen_pos=min_gen_pos,
              seed=int(wildcards.seed),
@@ -124,7 +123,7 @@ rule infer_scale_real_map:
 # ------- 3. Combine all of the estimates into a spreadsheet -------- #
 rule combine_ls_verify:
   input:
-    data = lambda wildcards: expand(config['tmpdir'] + 'ls_verify/results/samp_{n}.scale_{scale_min}_{scale_max}.seed{seed}.asc{maf}.thin{thin}.rep{rep}.npz', n=wildcards.n, rep=[0,1,2], scale_min=100, scale_max=1000, thin=[5,10,20,50,100,500], maf=1, seed=range(1,6))
+    data = lambda wildcards: expand(config['tmpdir'] + 'ls_verify/results/samp_{n}.scale_{scale_min}_{scale_max}.seed{seed}.asc{maf}.thin{thin}.rep{rep}.npz', n=wildcards.n, rep=[0], scale_min=100, scale_max=1000, thin=[5,10,50,100], maf=1, seed=range(1,20))
   output:
     csv = 'results/ls_verify/ls_simulations_{n,\d+}_thinned.csv'
   run:
@@ -139,11 +138,13 @@ rule combine_ls_verify:
     nsnps = []
     min_gen_dist = []
     replicates = []
+    thin = []
     for f in tqdm(input.data):
       df = np.load(f)
       n = df['scales_true'].size
       seeds.append(np.repeat(df['seed'], n))
       nsnps.append(np.repeat(df['nsnps'], n))
+      thin.append(np.repeat(df['thin'],n))
       min_gen_dist.append(np.repeat(df['min_gen_pos'], n))
       replicates.append(np.repeat(df['replicate'], n))
       scales_true.append(df['scales_true'])
@@ -163,6 +164,7 @@ rule combine_ls_verify:
     nsnps = np.hstack(nsnps)
     replicates = np.hstack(replicates)
     min_gen_dist = np.hstack(min_gen_dist)
+    thin = np.hstack(thin)
     # Make it into a dataframe
     d = {'scales_true': scales_true,
          'scales_marg_hat':scales_marg_hat,
@@ -171,6 +173,7 @@ rule combine_ls_verify:
          'se_scales_jt_hat':se_scales_jt_hat,
          'se_eps_jt_hat': se_eps_jt_hat,
          'nsnps': nsnps,
+         'thin': thin,
          'seeds': seeds,
          'replicate': replicates,
          'min_gen_dist': min_gen_dist}
@@ -180,4 +183,4 @@ rule combine_ls_verify:
 
 rule full_verify:
   input:
-    expand('results/ls_verify/ls_simulations_{n}_thinned.csv', n=[100])
+    expand('results/ls_verify/ls_simulations_{n}_thinned.csv', n=[100,49])
