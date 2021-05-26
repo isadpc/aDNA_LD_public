@@ -97,7 +97,7 @@ def calc_se_spline(scales, loglls, mle_scale):
     """Calculate the standard errors using the spline."""
     logll_spl = UnivariateSpline(scales, loglls, s=0, k=4)
     logll_deriv2 = logll_spl.derivative(n=2)
-    se = se = 1./np.sqrt(-logll_deriv2(mle_scale))
+    se = 1./np.sqrt(-logll_deriv2(mle_scale))
     return(se)
 
 def calc_se_finite_diff(f, mle_x, eps=1e-1):
