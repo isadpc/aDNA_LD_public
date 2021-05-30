@@ -9,7 +9,7 @@ The public facing repository for looking at two-locus and haplotype copying prop
 If you are interested in a particular figure from the manuscript, the relevant iPython notebook is listed below:
 
 **Main Figures**
-* [Figure 1](`notebooks/main_analyses/two_locus_adna.ipynb`)
+* [Figure 1](notebooks/main_analyses/two_locus_adna.ipynb)
 * Figure 2 (`notebooks/main_analyses/two_locus_demographic.ipynb`)
 * Figure 3 (`notebooks/main_analyses/two_locus_demographic.ipynb`)
 * Figure 4 (`notebooks/main_analyses/corr_piA_piB_real_data.ipynb`)
