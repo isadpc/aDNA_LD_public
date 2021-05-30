@@ -10,22 +10,22 @@ If you are interested in a particular figure from the manuscript, the relevant i
 
 **Main Figures**
 * [Figure 1](notebooks/main_analyses/two_locus_adna.ipynb)
-* Figure 2 (`notebooks/main_analyses/two_locus_demographic.ipynb`)
-* Figure 3 (`notebooks/main_analyses/two_locus_demographic.ipynb`)
-* Figure 4 (`notebooks/main_analyses/corr_piA_piB_real_data.ipynb`)
-* Figure 5 (`notebooks/main_analyses/joint_LDstats.ipynb`)
-* Figure 6 (`notebooks/main_analyses/demography_copying_rate.ipynb`)
-* Figure 7 (`notebooks/main_analyses/reich_1240k_analysis.ipynb`)
+* [Figure 2](notebooks/main_analyses/two_locus_demographic.ipynb)
+* [Figure 3](notebooks/main_analyses/two_locus_demographic.ipynb)
+* [Figure 4](notebooks/main_analyses/corr_piA_piB_real_data.ipynb)
+* [Figure 5](notebooks/main_analyses/joint_LDstats.ipynb)
+* [Figure 6](notebooks/main_analyses/demography_copying_rate.ipynb)
+* [Figure 7](notebooks/main_analyses/reich_1240k_analysis.ipynb)
 
 **Supplementary Figures**
 
-* Figure S1 (`notebooks/supp_analyses/two_locus_adna_divergence.ipynb`)
-* Figure S2 (`notebooks/main_analyses/two_locus_demographic.ipynb`)
-* Figure S3 (`notebooks/main_analyses/two_locus_demographic.ipynb`)
-* Figure S4 (`notebooks/supp_analyses/time_to_first_coal_anc_sample.ipynb`)
-* Figure S5 (`notebooks/main_analyses/reich_1240k_analysis.ipynb`)
-* Figure S6 (`notebooks/main_analyses/reich_1240k_analysis.ipynb`)
-* Figure S7 (`notebooks/supp_analyses/check_first_coal.ipynb`)
+* [Figure S1](notebooks/supp_analyses/two_locus_adna_divergence.ipynb)
+* [Figure S2](notebooks/main_analyses/two_locus_demographic.ipynb)
+* [Figure S3](notebooks/main_analyses/two_locus_demographic.ipynb)
+* [Figure S4](notebooks/supp_analyses/time_to_first_coal_anc_sample.ipynb)
+* [Figure S5](notebooks/main_analyses/reich_1240k_analysis.ipynb)
+* [Figure S6](notebooks/main_analyses/reich_1240k_analysis.ipynb)
+* [Figure S7](notebooks/supp_analyses/check_first_coal.ipynb)
 
 ### Data
 
