@@ -8,6 +8,7 @@ import numpy as np
 import msprime as msp
 import pandas as pd
 from tqdm import tqdm
+from scipy import optimize
 
 # Import all of the functionality that we would need
 sys.path.append('src/')
@@ -184,3 +185,78 @@ rule combine_ls_verify:
 rule full_verify:
   input:
     expand('results/ls_verify/ls_simulations_{n}_thinned.csv', n=[49])
+
+    
+# Testing out alternative bounded optimization routines ... 
+def calc_se_finite_diff(f, mle_x, eps=1e-1):
+    """f is the loglikelihood function."""
+    xs = np.array([mle_x-2*eps, mle_x-eps, mle_x, mle_x+eps, mle_x+2*eps])
+    ys = np.array([f(mle_x-2*eps),f(mle_x-eps), f(mle_x), f(mle_x + eps), f(mle_x+2*eps)])
+    dy=np.diff(ys,1)
+    dx=np.diff(xs,1)
+    yfirst=dy/dx
+    xfirst=0.5*(xs[:-1]+xs[1:])
+    dyfirst=np.diff(yfirst,1)
+    dxfirst=np.diff(xfirst,1)
+    ysecond=dyfirst/dxfirst
+    se = 1./np.sqrt(-ysecond[1])
+    return(ysecond, se)
+
+
+
+rule infer_scale_global_optimization_real_map:
+  input:
+    hap_panel = rules.gen_hap_panel_real_map.output.hap_panel
+  output:
+    scale_inf = config['tmpdir'] + 'ls_verify/results/globalopt_samp_{n,\d+}.scale_{scale_min,\d+}_{scale_max,\d+}.seed{seed,\d+}.asc{maf,\d+}.thin{thin,\d+}.rep{rep,\d+}.npz'
+  run:
+    scale_min, scale_max = int(wildcards.scale_min), int(wildcards.scale_max)
+    maf = int(wildcards.maf)/100.
+    thin = int(wildcards.thin)
+    assert(scale_min < scale_max)
+    assert(scale_min % 100 == 0)
+    assert(scale_max % 100 == 0)
+    scales_true = np.arange(scale_min, scale_max, 100)
+    df = np.load(input.hap_panel)
+    haps = df['haps']
+    rec_pos = df['rec_pos']
+    # Ascertaining the reference panel for simulations 
+    asc_haps, asc_pos, idx = ascertain_variants(haps, rec_pos, maf=maf, thinning=thin)
+    min_gen_pos = np.min(asc_pos[1:] - asc_pos[:-1])
+    ls_model = LiStephensHMM(asc_haps, asc_pos)
+    # Setting up the test haplotypes
+    test_haps = [ls_model._sim_haplotype(scale=s, eps=1e-2, seed=int(wildcards.seed))[0] for s in scales_true]
+    # Setting result directories ...
+    scales_jt_hat = np.zeros(scales_true.size)
+    eps_jt_hat = np.zeros(scales_true.size)
+    se_scales_jt_hat = np.zeros(scales_true.size)
+    se_eps_jt_hat = np.zeros(scales_true.size)
+    # Iterate through all of these sequentially
+    for i in tqdm(range(scales_true.size)):
+        f = lambda x : ls_model._negative_logll(test_haps[i], scale=x[0], eps=x[1])
+        bounds = [(1, 1e5), (1e-4, 0.5)]
+        res_jt = optimize.shgo(bounds, n=30, sampling_method='sobol', options={'verbose': 1, 'disp': 1})
+        scales_jt_hat[i] = res_jt.x[0]
+        eps_jt_hat[i] = res_jt.x[1]
+        f1 = lambda x : -ls_model._negative_logll(test_haps[i], scale=x, eps=res_jt.x[1])
+        f2 = lambda x : -ls_model._negative_logll(test_haps[i], scale=res_jt.x[0], eps=x)
+        
+        se_scales_jt_hat[i] = calc_se_finite_diff(f1, res_jt.x[0], eps=1e-1)[1]
+        se_eps_jt_hat[i] = calc_se_finite_diff(f2, res_jt.x[1], eps=1e-1)[1]
+    print("Completed estimation of parameters!")
+    # Saving the output file
+    np.savez_compressed(output.scale_inf,
+             thin=int(wildcards.thin),
+             nsnps=asc_pos.size,
+             min_gen_pos=min_gen_pos,
+             seed=int(wildcards.seed),
+             replicate=int(wildcards.rep),
+             scales_true=scales_true,
+             scales_jt_hat=scales_jt_hat,
+             eps_jt_hat=eps_jt_hat,
+             se_scales_jt_hat=se_scales_jt_hat,
+             se_eps_jt_hat=se_eps_jt_hat)
+
+rule test_global_opt:
+    input:
+         expand(config['tmpdir'] + 'ls_verify/results/globalopt_samp_{n}.scale_{scale_min}_{scale_max}.seed{seed}.asc{maf}.thin{thin}.rep{rep}.npz', n=1000, rep=[0], scale_min=100, scale_max=1000, thin=[5], maf=1, seed=range(1, 20))
