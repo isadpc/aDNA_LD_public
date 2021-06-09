@@ -14,11 +14,10 @@ def _log_sum_exp(arr):
 
 @jit(nopython=True, cache=True)
 def _emission_helper(a, hij, eps):
-  # why do we have the /2 here? it seems to cause a strange scaling factor error here...
-  prob_mut = eps / 2
+  prob_mut = eps
   prob_no_mut = 1. - eps
   # Calculating emission probability here
-  emiss_prob = (prob_mut + prob_no_mut) * (a == hij) + prob_mut * (a != hij)
+  emiss_prob = (prob_no_mut) * (a == hij) + prob_mut * (a != hij)
   return(np.log(emiss_prob))
 
 @jit(nopython=True, cache=True)
@@ -162,6 +161,12 @@ class LiStephensHMM:
     f = lambda s : self._negative_logll(test_hap, scale=s, eps=eps)
     ta = minimize_scalar(f, **kwargs)
     return(ta)
+  
+  def _infer_eps(self, test_hap, scale=1e2, **kwargs):
+    """ Inferring error by numerically minimizing the negative log-likelihood """
+    f = lambda e : self._negative_logll(test_hap, scale=scale, eps=e)
+    ta = minimize_scalar(f, **kwargs)
+    return(ta)  
 
   def _infer_params(self,test_hap, **kwargs):
     """ Infer error parameter and scale parameter using numerical optimization """
