@@ -4,6 +4,7 @@ import numba
 from numba import jit, prange
 from scipy.optimize import minimize_scalar
 from scipy.optimize import minimize
+from scipy.optimize import basinhopping
 
 @jit(nopython=True, cache=True)
 def _log_sum_exp(arr):
@@ -14,10 +15,8 @@ def _log_sum_exp(arr):
 
 @jit(nopython=True, cache=True)
 def _emission_helper(a, hij, eps):
-  prob_mut = eps
-  prob_no_mut = 1. - eps
   # Calculating emission probability here
-  emiss_prob = (prob_no_mut) * (a == hij) + prob_mut * (a != hij)
+  emiss_prob = (1.-eps) * (a == hij) + eps * (a != hij)
   return(np.log(emiss_prob))
 
 @jit(nopython=True, cache=True)
