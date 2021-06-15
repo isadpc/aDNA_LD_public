@@ -16,7 +16,7 @@ def _log_sum_exp(arr):
 @jit(nopython=True, cache=True)
 def _emission_helper(a, hij, eps):
   # Calculating emission probability here
-  emiss_prob = (1.-eps) * (a == hij) + eps * (a != hij)
+  emiss_prob = (1. - eps) * (a == hij) + eps * (a != hij)
   return(np.log(emiss_prob))
 
 @jit(nopython=True, cache=True)
