@@ -145,12 +145,13 @@ rule estimate_jump_rate_sample_real_1kg:
       min_idx = np.argmin(neg_log_lls)
       print(scales, neg_log_lls)
       scales_bracket = (1., scales[min_idx]+1.0)
-      scale_inf_res = ls_model._infer_scale(test_hap, method='Brent', bracket=scales_bracket, tol=1e-3)
+      scale_inf_res = ls_model._infer_scale(test_hap, method='Brent', bracket=scales_bracket)
       # Setting the error rate to be similar to the original LS-Model
       f = lambda x : -ls_model._negative_logll(test_hap, scale=x, eps=1e-2)
       _, se_finite_diff = calc_se_finite_diff(f, scale_inf_res.x)
       # NOTE: We initialize the x0 using the marginal solution for the scale?
-      mle_params = ls_model._infer_params(test_hap, x0=[scale_inf_res.x, 1e-3], bounds=[(1e1,1e6),(1e-6,0.5)], tol=1e-3)
+      bounds = [(10, 1e4), (1e-4, 0.25)]
+      mle_params = ls_model._infer_params(test_hap, x0=[scale_inf_res.x, 1e-2], bounds=bounds)
       cur_params = np.array([np.nan,np.nan])
       se_params = np.array([np.nan,np.nan])
       if mle_params['success']:
@@ -198,7 +199,6 @@ rule gen_all_hap_copying_real1kg_panel:
      expand(config['tmpdir'] + 'hap_copying/chrX_male_analysis/mle_est_real_1kg/chrX_filt.panel_{panel}.sample_{sample}.recmap_{rec}.listephens_hmm.npz', rec='deCODE', panel=['ceu', 'eur', 'fullkg'], sample=ancient_samples['indivID'].values)
 
 
-# TODO : final rule to fully collapse the dataset ...
 rule collapse_mle_hapcopying_results:
   input:
     files = rules.gen_all_hap_copying_real1kg_panel.input

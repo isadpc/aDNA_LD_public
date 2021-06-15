@@ -17,6 +17,7 @@ from aDNA_coal_sim import *
 
 # Import configurations to add some things
 configfile: "config.yml"
+include: "hap_copying.smk"
 
 def ascertain_variants(hap_panel, pos, maf=0.05, thinning=1):
     """Ascertaining variants based on a minor allele frequency threshold."""
@@ -29,24 +30,22 @@ def ascertain_variants(hap_panel, pos, maf=0.05, thinning=1):
 
 
 # ------- 1. Generate a modern haplotype panel from ChrX using the deCODE map ------- #
-rule gen_hap_panel_real_map:
-  input:
-    recmap = config['recmaps']['deCODE']['chrX']
+rule gen_hap_panel_test:
   output:
-    hap_panel = config['tmpdir'] + 'ls_verify/data/chrX_{n, \d+}_{rep,\d+}.panel.npz'
+    hap_panel = config['tmpdir'] + 'ls_verify/data/tenMb_{n, \d+}_{rep,\d+}.panel.npz'
   run:
-    df_recmap = pd.read_csv(input.recmap, sep='\s+')
-    recmap = msp.RecombinationMap.read_hapmap(input.recmap)
-    ts = msp.simulate(sample_size=int(wildcards.n), recombination_map=recmap, mutation_rate=1.2e-8, Ne=1e4)
+    ts = msp.simulate(sample_size=int(wildcards.n), recombination_rate=2e-8, mutation_rate=1.2e-8, length=10e6, Ne=1e4)
     pos = np.array([s.position for s in ts.sites()])
     haps = ts.genotype_matrix()
-    daf = np.mean(haps, axis=1)
-    idx = (daf > 0.01) & (daf < 0.99)
+    ac = np.sum(haps, axis=1)
+    mac = np.minimum(ac, int(wildcards.n) - ac)
+    maf = mac / int(wildcards.n)
+    idx = np.where(maf > 0.01)[0]
     haps_filt = haps[idx,:]
     pos_filt = pos[idx]
-    cm_pos_filt = np.interp(pos_filt, df_recmap['Physical_Pos'].values, df_recmap['deCODE'].values)
+    cm_pos_filt = pos_filt * 2e-8
     # Converting it to morgan positioning
-    morgan_pos_filt = cm_pos_filt / 100
+    morgan_pos_filt = cm_pos_filt
     pos_diff = morgan_pos_filt[1:] - morgan_pos_filt[:-1]
     idx_diff = pos_diff > 0.
     idx_diff = np.insert(idx_diff,True,0)
@@ -60,16 +59,14 @@ rule gen_hap_panel_real_map:
 
 
 # ------- 2. Simulating & Inferring from the LS model ------ #
-# - TODO : should we implement ascertainment as well 
 rule infer_scale_real_map:
   input:
-    hap_panel = rules.gen_hap_panel_real_map.output.hap_panel
+    hap_panel = rules.gen_hap_panel_test.output.hap_panel
   output:
-    scale_inf = config['tmpdir'] + 'ls_verify/results/samp_{n,\d+}.scale_{scale_min,\d+}_{scale_max,\d+}.seed{seed,\d+}.asc{maf,\d+}.thin{thin,\d+}.rep{rep,\d+}.npz'
+    scale_inf = config['tmpdir'] + 'ls_verify/results/samp_{n,\d+}.scale_{scale_min,\d+}_{scale_max,\d+}.seed{seed,\d+}.asc{maf,\d+}.rep{rep,\d+}.npz'
   run:
     scale_min, scale_max = int(wildcards.scale_min), int(wildcards.scale_max)
     maf = int(wildcards.maf)/100.
-    thin = int(wildcards.thin)
     assert(scale_min < scale_max)
     assert(scale_min % 100 == 0)
     assert(scale_max % 100 == 0)
@@ -77,10 +74,8 @@ rule infer_scale_real_map:
     df = np.load(input.hap_panel)
     haps = df['haps']
     rec_pos = df['rec_pos']
-    # Ascertaining the reference panel for simulations 
-    asc_haps, asc_pos, idx = ascertain_variants(haps, rec_pos, maf=maf, thinning=thin)
-    min_gen_pos = np.min(asc_pos[1:] - asc_pos[:-1])
-    ls_model = LiStephensHMM(asc_haps, asc_pos)
+    min_gen_pos = np.min(rec_pos[1:] - rec_pos[:-1])
+    ls_model = LiStephensHMM(haps, rec_pos)
     # Setting up the test haplotypes
     test_haps = [ls_model._sim_haplotype(scale=s, eps=1e-2, seed=int(wildcards.seed))[0] for s in scales_true]
     # Setting result directories ...
@@ -93,7 +88,7 @@ rule infer_scale_real_map:
     for i in tqdm(range(scales_true.size)):
       scales = np.logspace(2,6,20)
       # evaluating the negative log-likelihood to find a minimal index with eps = 1e-2
-      neg_log_lls = np.array([ls_model._negative_logll(test_haps[i], scale=s, eps=1e-2) for s in tqdm(scales)])
+      neg_log_lls = np.array([ls_model._negative_logll(test_haps[i], scale=s, eps=1e-2) for s in scales])
       min_idx = np.argmin(neg_log_lls)
       scales_bracket = (1., scales[min_idx]+100.0)
       # Inferring the marginal
@@ -103,16 +98,15 @@ rule infer_scale_real_map:
       bounds = [(10, 1e4), (1e-4, 0.25)]
       start_jump = np.random.uniform(low=10, high=1e4)
       start_eps = np.random.uniform(low=1e-4, high=0.25)
-      res_jt = ls_model._infer_params(test_haps[i], x0=[start_jump, start_eps], niter=5, minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bounds})
+      res_jt = ls_model._infer_params(test_haps[i], x0=[res.x, start_eps], bounds=bounds)
       scales_jt_hat[i] = res_jt.x[0]
       eps_jt_hat[i] = res_jt.x[1]
-      se_scales_jt_hat[i] = np.nan
-      se_eps_jt_hat[i] = np.nan
+      se_scales_jt_hat[i] = np.sqrt(res_jt.hess_inv.todense()[0,0])
+      se_eps_jt_hat[i] = np.sqrt(res_jt.hess_inv.todense()[1,1])
     print("Completed estimation of parameters!")
     # Saving the output file
     np.savez_compressed(output.scale_inf,
-             thin=int(wildcards.thin),
-             nsnps=asc_pos.size,
+             nsnps=rec_pos.size,
              min_gen_pos=min_gen_pos,
              seed=int(wildcards.seed),
              replicate=int(wildcards.rep),
@@ -127,7 +121,7 @@ rule infer_scale_real_map:
 # ------- 3. Combine all of the estimates into a spreadsheet -------- #
 rule combine_ls_verify:
   input:
-    data = lambda wildcards: expand(config['tmpdir'] + 'ls_verify/results/samp_{n}.scale_{scale_min}_{scale_max}.seed{seed}.asc{maf}.thin{thin}.rep{rep}.npz', n=wildcards.n, rep=range(10), scale_min=100, scale_max=1000, thin=[5,100], maf=1, seed=[1])
+    data = lambda wildcards: expand(config['tmpdir'] + 'ls_verify/results/samp_{n}.scale_{scale_min}_{scale_max}.seed{seed}.asc{maf}.rep{rep}.npz', n=wildcards.n, rep=range(5), scale_min=100, scale_max=1000, maf=1, seed=[1])
   output:
     csv = 'results/ls_verify/ls_simulations_{n,\d+}_thinned.csv'
   run:
@@ -142,13 +136,11 @@ rule combine_ls_verify:
     nsnps = []
     min_gen_dist = []
     replicates = []
-    thin = []
     for f in tqdm(input.data):
       df = np.load(f)
       n = df['scales_true'].size
       seeds.append(np.repeat(df['seed'], n))
       nsnps.append(np.repeat(df['nsnps'], n))
-      thin.append(np.repeat(df['thin'],n))
       min_gen_dist.append(np.repeat(df['min_gen_pos'], n))
       replicates.append(np.repeat(df['replicate'], n))
       scales_true.append(df['scales_true'])
@@ -168,7 +160,6 @@ rule combine_ls_verify:
     nsnps = np.hstack(nsnps)
     replicates = np.hstack(replicates)
     min_gen_dist = np.hstack(min_gen_dist)
-    thin = np.hstack(thin)
     # Make it into a dataframe
     d = {'scales_true': scales_true,
          'scales_marg_hat':scales_marg_hat,
@@ -177,7 +168,6 @@ rule combine_ls_verify:
          'se_scales_jt_hat':se_scales_jt_hat,
          'se_eps_jt_hat': se_eps_jt_hat,
          'nsnps': nsnps,
-         'thin': thin,
          'seeds': seeds,
          'replicate': replicates,
          'min_gen_dist': min_gen_dist}
@@ -187,7 +177,7 @@ rule combine_ls_verify:
 
 rule full_verify:
   input:
-    expand('results/ls_verify/ls_simulations_{n}_thinned.csv', n=[49])
+    expand('results/ls_verify/ls_simulations_{n}_thinned.csv', n=[50])
 
     
 # Testing out alternative bounded optimization routines ... 

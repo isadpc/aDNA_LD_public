@@ -251,12 +251,13 @@ rule infer_scale_serial_all_ascertained:
     scales_bracket = (1., scales[min_idx]+1.0)
     neg_log_lls_brack = (0, neg_log_lls[min_idx])
     print(ta_test, scales_bracket, neg_log_lls_brack)
-    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Brent', bracket=scales_bracket, tol=1e-3)
+    mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Brent', bracket=scales_bracket)
     # Calculate the marginal standard error
     f = lambda x : -cur_hmm._negative_logll(anc_asc_hap, scale=x, eps=1e-2)
     _, se_finite_diff = calc_se_finite_diff(f, mle_scale.x)
     # Estimating both error and scale parameters jointly
-    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[mle_scale.x, 1e-3], bounds=[(1e1,1e5), (1e-6,0.5)], tol=1e-3)
+    bounds = [(10, 1e4), (1e-4, 0.25)]
+    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[mle_scale.x, 1e-2], bounds=bounds)
     cur_params = np.array([np.nan, np.nan])
     se_params = np.array([np.nan, np.nan])
     if mle_params['success']:
@@ -443,7 +444,10 @@ rule infer_scale_serial_ascertained_ceu_sims:
     start_scale = scales[np.argmin(neg_log_lls)]
     mle_scale = cur_hmm._infer_scale(anc_asc_hap, eps=1e-2, method='Brent', bracket=(1., start_scale + 1e2), tol=1e-3)
     # Estimating both error and scale parameters jointly
-    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[1e2, 1e-4], bounds=[(mle_scale.x, 1e7), (1e-6,1e-1)], tol=1e-3)
+    bounds = [(10, 1e4), (1e-4, 0.25)]
+    start_jump = np.random.uniform(low=10, high=1e4)
+    start_eps = np.random.uniform(low=1e-4, high=0.25)
+    mle_params = cur_hmm._infer_params(anc_asc_hap, x0=[start_jump, start_eps], bounds=bounds)
     cur_params = np.array([np.nan, np.nan])
     se_params = np.array([np.nan, np.nan])
     if mle_params['success']:
