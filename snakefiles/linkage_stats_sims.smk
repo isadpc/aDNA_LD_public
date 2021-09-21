@@ -203,8 +203,10 @@ rule collapse_raw_stats_verify_bias:
     output:
         results = 'results/ld_stats_raw/ld_stats_time_sep_raw_verify_bias.csv.gz'
     run:
-        ed0dt_tot = []
-        std_ed0dt_tot = []
+        d0dt_tot = []
+        std_d0dt_tot = []
+        pApB_tot = []
+        std_pApB_tot = []
         rec_dist_tot = []
         ta_tot = []
         scenario_tot = []
@@ -213,34 +215,44 @@ rule collapse_raw_stats_verify_bias:
         for f in tqdm(input.ldfiles):
             df = np.load(f)
             # Calculate the expected LD statistic
-            ed0dt = (df['Dmod']*df['Danc']) / (df['pAmod']*(1.-df['pAanc'])*df['pBmod']*(1. - df['pBanc']))
+            d0dt = (df['Dmod']*df['Danc'])
+            pApB = (df['pAmod']*(1.-df['pAanc'])*df['pBmod']*(1. - df['pBanc']))
             rec_dist = df['rec_dist']
             _, bins = np.histogram(rec_dist, bins=np.array([1e-4, 5e-3, 1e-2]))
-            mean_ed0dt, _, _ = binned_statistic(rec_dist, ed0dt, np.nanmean, bins=bins)
-            std_ed0dt, _, _ = binned_statistic(rec_dist, ed0dt, np.nanstd, bins=bins)
+            mean_d0dt, _, _ = binned_statistic(rec_dist, d0dt, np.nanmean, bins=bins)
+            std_d0dt, _, _ = binned_statistic(rec_dist, d0dt, np.nanstd, bins=bins)
+            mean_pApB, _, _ = binned_statistic(rec_dist, pApB, np.nanmean, bins=bins)
+            std_pApB, _, _ = binned_statistic(rec_dist, pApB, np.nanstd, bins=bins)
             mean_bins, _, _ = binned_statistic(rec_dist, rec_dist, np.nanmean, bins=bins)
-            assert mean_ed0dt.size == mean_bins.size
-            assert std_ed0dt.size == mean_bins.size
+            assert mean_d0dt.size == mean_bins.size
+            assert std_d0dt.size == mean_bins.size
+            assert mean_pApB.size == mean_bins.size
+            assert std_pApB.size == mean_bins.size
             ta = np.repeat(df['ta'], mean_bins.size)
             scenario = np.repeat(df['scenario'], mean_bins.size)
             maf = np.repeat(df['maf'], mean_bins.size)
             maf_tot.append(maf)
             seed = np.repeat(df['seed'], mean_bins.size)
             # Append them all!
-            ed0dt_tot.append(mean_ed0dt)
-            std_ed0dt_tot.append(std_ed0dt)
+            d0dt_tot.append(mean_d0dt)
+            std_d0dt_tot.append(std_d0dt)
+            pApB_tot.append(mean_pApB)
+            std_pApB_tot.append(std_pApB)
             rec_dist_tot.append(mean_bins)
             ta_tot.append(ta)
             scenario_tot.append(scenario)
             seed_tot.append(seed)
-        ed0dt_tot = np.hstack(ed0dt_tot)
-        std_ed0dt_tot = np.hstack(std_ed0dt_tot)
+        d0dt_tot = np.hstack(d0dt_tot)
+        std_d0dt_tot = np.hstack(std_d0dt_tot)
+        pApB_tot = np.hstack(pApB_tot)
+        std_pApB_tot = np.hstack(std_pApB_tot)
         rec_dist_tot = np.hstack(rec_dist_tot)
         ta_tot = np.hstack(ta_tot)
         scenario_tot = np.hstack(scenario_tot)
         seed_tot = np.hstack(seed_tot)
         maf_tot = np.hstack(maf_tot)
-        tot_dict = {'ed0dt': ed0dt_tot, 'std_ed0dt': std_ed0dt_tot, 'rec_dist': rec_dist_tot, 'ta': ta_tot, 'scenario': scenario_tot, 'maf': maf_tot, 'seed': seed_tot}
+#         print(d0dt_tot.size, std_d0dt_tot.size, rec_dist_tot)
+        tot_dict = {'d0dt': d0dt_tot, 'std_d0dt': std_d0dt_tot, 'pApB': pApB_tot, 'std_pApB': std_pApB_tot, 'rec_dist': rec_dist_tot, 'ta': ta_tot, 'scenario': scenario_tot, 'maf': maf_tot, 'seed': seed_tot}
         df_out = pd.DataFrame(tot_dict)
         df_out.to_csv(output.results, index=False)        
 
