@@ -76,7 +76,7 @@ rule sim_two_locus_branch_length:
 # ------- Finalized simulations under different demographic histories -------#
 rule run_two_locus_sims_scenarios:
   output:
-    config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0,\d+}_na{na,\d+}.ta{ta,\d+}.r_{rec_rate, \d+}.Ne{Ne,\d+}.rep{nreps,\d+}.seed_{seed,\d+}.branch_length.npz'
+    config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0,\d+}_na{na,\d+}.ta{ta,\d+}.r_{rec_rate}.Ne{Ne,\d+}.rep{nreps,\d+}.seed_{seed,\d+}.branch_length.npz'
   wildcard_constraints:
     scenario='SerialConstant|IBDNeUK10K|Tennessen|InstantGrowth[0-9]*'
   run:
@@ -110,7 +110,7 @@ rule run_two_locus_sims_scenarios:
     np.savez(str(output),
              scenario=wildcards.scenario,
              seed=np.int32(wildcards.seed),
-             rec_rate=np.int32(wildcards.rec_rate),
+             rec_rate=np.float32(wildcards.rec_rate),
              ta=ta,
              paired_branch_length=paired_branch_length,
              Ne=cur_two_locus.Ne)
@@ -285,7 +285,7 @@ rule sim_ld_time_strat_two_locus:
 rule full_two_locus_bl_european:
     """Generating the full two-locus simulations for the correlation in number of mutations."""
     input:
-        expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne10000.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['Tennessen'], n0=1, na=1, ta=[0,233,1500], seed=42, rec_rate=4, nreps=50000)
+        expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne10000.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['Tennessen'], n0=1, na=1, ta=[0,233,1500], seed=[42], rec_rate=np.around(np.linspace(3,5,30), 2), nreps=5000)
         
 
 rule combine_branch_length_est_two_locus_european:
