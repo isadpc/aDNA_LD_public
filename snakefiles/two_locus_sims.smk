@@ -104,7 +104,7 @@ rule run_two_locus_sims_scenarios:
       raise ValueError('Improper value input for this simulation!')
     seed = np.int32(wildcards.seed)
     cur_two_locus._simulate(random_seed=seed)
-    cur_two_locus._two_locus_branch_length()
+    cur_two_locus._two_locus_branch_length(cur_two_locus.treeseq)
     paired_branch_length = cur_two_locus.pair_branch_length
     # Saving the approach here ...
     np.savez(str(output),
@@ -278,3 +278,42 @@ rule sim_ld_time_strat_two_locus:
     expand(config['tmpdir'] +
     'two_loci/serial/ed0dt_norm/est_{ta}_theta{theta}_{nreps}_seed{seed}_ld_d0dtjt.npz',
     seed=42, nreps=[1], theta=1000, ta=[0])
+
+    
+    
+# --------- Simulate two-locus mutational data under the more realistic model --------- #
+rule full_two_locus_bl_european:
+    """Generating the full two-locus simulations for the correlation in number of mutations."""
+    input:
+        expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne10000.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['Tennessen'], n0=1, na=1, ta=[0,233,1500], seed=42, rec_rate=4, nreps=50000)
+        
+
+rule combine_branch_length_est_two_locus_european:
+  """Combine all of the branch length summary stats into a CSV that we can use later on."""
+  input:
+    files = rules.full_two_locus_bl_european.input
+  output:
+    'results/two_loci/tennessen_real_data_branch_len.csv'
+  run:
+    tot_df = []
+    for x in tqdm(input.files):
+      # Setting up a data frame entries
+      df = np.load(x)
+      Ne = df['Ne']
+      paired_bl = df['paired_branch_length']
+      ta = df['ta']
+      scenario=df['scenario']
+      seed = df['seed']
+      rec_rate=df['rec_rate']
+      # Compute statistics from the branch_lengths
+      corr_bl = pearsonr(paired_bl[:,0], paired_bl[:,1])[0]
+      cov_bl = np.cov(paired_bl[:,0], paired_bl[:,1])[0,0]
+      ebl = np.nanmean(paired_bl[:,0])
+      Ne_est = ebl / 2. / 2.
+      N = paired_bl.shape[0]
+      cur_row = [scenario, ta, rec_rate, corr_bl, cov_bl, ebl, Ne, Ne_est, N, seed]
+      tot_df.append(cur_row)
+    # Creating the dataframe and outputting to a CSV
+    df_final = pd.DataFrame(tot_df, columns=['scenario','ta','rec_rate','corr_bl','cov_bl','exp_bl','Ne','Ne_est', 'Nreps', 'seed'])
+    df_final = df_final.dropna()
+    df_final.to_csv(str(output), index=False, header=df_final.columns)
