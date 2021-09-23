@@ -20,7 +20,7 @@ from li_stephens import LiStephensHMM
 configfile: "config.yml"
 
 # NOTE: we can swap this out for the full dataset with lower-coverage individuals as well...
-ancient_samples = pd.read_csv('data/hap_copying/chrX_male_analysis/sample_lists/ancient_individuals.txt', sep='\t')
+ancient_samples = pd.read_csv('data/hap_copying/chrX_male_analysis/sample_lists/ancient_europe_individuals.txt', sep='\t')
 
 def gen_raw_haps(x_chrom_data, panel_file, test_id='NA20827.SG'):
     """
