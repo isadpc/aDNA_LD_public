@@ -282,6 +282,84 @@ rule sim_ld_time_strat_two_locus:
     
     
 # --------- Simulate two-locus mutational data under the more realistic model --------- #
+rule sim_two_locus_mutations_european:
+    """Simulating the two locus mutations"""
+    output:
+        corr_est = config['tmpdir'] + 'two_loci/serial/corrmut_european/est_{ta,\d+}_theta{theta,\d+}_{nreps,\d+}_seed{seed,\d+}_corr_mut.npz'
+    run:
+        Ne = 1.
+        nreps = int(wildcards.nreps)
+        ta = int(wildcards.ta)
+        seed = int(wildcards.seed)
+        rhos = np.logspace(-4,-2, 100)
+        # NOTE: the theta variable here doesn't really matter ... 
+        theta = int(wildcards.theta) / 1000.
+        theta = 1e3*1.2e-8
+        corr_mut = np.zeros(rhos.size)
+        for i,r in tqdm(enumerate(rhos)):
+            cur_sim = TwoLocusSerialTennessen(ta=ta, Ne=Ne, rec_rate=r, reps=nreps)
+            ts_reps = cur_sim._simulate(mutation_rate=theta, random_seed=seed)
+            m = pair_mut(ts_reps, nreps, span_normalise=False)
+            corr_mut[i] = pearsonr(m[:,0], m[:,1])[0]
+        se_r_mut = np.sqrt((1. - (corr_mut**2))/(nreps-2))
+        # Saving the approach here ...
+        np.savez(str(output),
+                 scenario='Two-Locus Tennessen',
+                 seed=np.int32(wildcards.seed),
+                 rec_rate=rhos,
+                 ta=ta,
+                 theta = theta,
+                 corr_piA_piB=corr_mut,
+                 nreps=nreps,
+                 se_corr_piApiB=se_r_mut, Ne=1.)
+
+rule corr_mut_european:
+    input:
+        expand(config['tmpdir'] + 'two_loci/serial/corrmut_european/est_{ta}_theta{theta}_{nreps}_seed{seed}_corr_mut.npz', ta=[0,233,1500], theta=400, nreps=5000, seed=42)
+
+
+rule collect_two_locus_sims_european:
+  input:
+    files = rules.corr_mut_european.input
+  output:
+    'results/two_loci/european_real_data_mut_corr.csv'
+  run:
+    tot_df = []
+    for f in tqdm(input.files):
+      # Load in the current dataset
+      df = np.load(f)
+      print(df)
+      scenario = df['scenario']
+      rhos = df['rec_rate']
+      ta = df['ta']
+      theta = df['theta']
+      nreps = df['nreps']
+      corr_piA_piB = df['corr_piA_piB']
+      se_corr_piApiB = df['se_corr_piApiB']
+      seed = df['seed']
+      for (r,cr,se_r) in zip(rhos, corr_piA_piB, se_corr_piApiB):
+        tot_df.append([scenario, ta, seed, r, cr, se_r, nreps])
+          # Creating the dataframe and outputting to a CSV
+    df_final = pd.DataFrame(tot_df, columns=['scenario','ta','seed','rec_rate','corr_piApiB','se_corr_piApiB', 'nreps'])
+    df_final = df_final.dropna()
+    df_final.to_csv(str(output), index=False, header=df_final.columns)
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 rule full_two_locus_bl_european:
     """Generating the full two-locus simulations for the correlation in number of mutations."""
     input:

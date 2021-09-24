@@ -245,14 +245,14 @@ class TwoLocusSerialTennessen(TwoLocusSimulation):
         recomb_map = msp.RecombinationMap.uniform_map(
             self.loci, self.rec_rate, num_loci=self.loci
         )
-        self.treeseq = msp.simulate(
+        ts = msp.simulate(
             Ne=self.Ne,
             samples=self.samples,
             population_configurations=self.pop_config,
             demographic_events=self.demography,
             recombination_map=recomb_map,
-            num_replicates=self.reps,
-        )
+            num_replicates=self.reps, **kwargs)
+        return(ts)
 
     def _demography_debug(self):
         """Demography debugging."""
@@ -306,14 +306,14 @@ class TwoLocusSerialIBDNeUK10K(TwoLocusSimulation):
         recomb_map = msp.RecombinationMap.uniform_map(
             self.loci, self.rec_rate, num_loci=self.loci
         )
-        self.treeseq = msp.simulate(
+        ts = msp.simulate(
             Ne=self.Ne,
             samples=self.samples,
             demographic_events=self.demography,
             population_configurations=self.pop_config,
             recombination_map=recomb_map,
-            num_replicates=self.reps,
-        )
+            num_replicates=self.reps, **kwargs)
+        return(ts)
 
     def _demography_debug(self):
         """Demography debugging."""
