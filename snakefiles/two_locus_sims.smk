@@ -346,20 +346,6 @@ rule collect_two_locus_sims_european:
         
         
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
 rule full_two_locus_bl_european:
     """Generating the full two-locus simulations for the correlation in number of mutations."""
     input:
