@@ -98,7 +98,7 @@ rule run_est_jtLDstats_raw:
     expand(config['tmpdir'] +
             'ld_stats_raw/{scenario}/jointLDstats_mod{mod_n}_anc{n_anc}_t{ta}_l{length}_Ne{Ne}_{seed}_maf{maf}_polytotal{polytot}.npz',
             scenario='SerialConstant', ta=[0,100,1000], mod_n=500, n_anc=500,
-            seed=seeds[10:], length=1, Ne=10000, maf=[1,5], polytot=[1])
+            seed=seeds[10:], length=1, Ne=10000, maf=[0,1,5], polytot=[1])
 
 # ------ Collapsing these estimates into a plottable format ----- #
 rule collapse_raw_stats:
