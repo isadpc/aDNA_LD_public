@@ -103,8 +103,8 @@ rule run_two_locus_sims_scenarios:
     else:
       raise ValueError('Improper value input for this simulation!')
     seed = np.int32(wildcards.seed)
-    cur_two_locus._simulate(random_seed=seed)
-    cur_two_locus._two_locus_branch_length(cur_two_locus.treeseq)
+    ts = cur_two_locus._simulate(random_seed=seed)
+    cur_two_locus._two_locus_branch_length(ts)
     paired_branch_length = cur_two_locus.pair_branch_length
     # Saving the approach here ...
     np.savez(str(output),
@@ -315,7 +315,9 @@ rule sim_two_locus_mutations_european:
 
 rule corr_mut_european:
     input:
-        expand(config['tmpdir'] + 'two_loci/serial/corrmut_european/est_{ta}_theta{theta}_{nreps}_seed{seed}_corr_mut.npz', ta=[0,233,1500], theta=400, nreps=5000, seed=42)
+        expand(config['tmpdir'] +
+        'two_loci/serial/corrmut_european/est_{ta}_theta{theta}_{nreps}_seed{seed}_corr_mut.npz',
+        ta=[0,233,1500], theta=400, nreps=10000, seed=range(1,6))
 
 rule collect_two_locus_sims_european:
   input:
