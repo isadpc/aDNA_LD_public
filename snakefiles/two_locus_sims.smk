@@ -317,7 +317,6 @@ rule corr_mut_european:
     input:
         expand(config['tmpdir'] + 'two_loci/serial/corrmut_european/est_{ta}_theta{theta}_{nreps}_seed{seed}_corr_mut.npz', ta=[0,233,1500], theta=400, nreps=5000, seed=42)
 
-
 rule collect_two_locus_sims_european:
   input:
     files = rules.corr_mut_european.input
@@ -349,7 +348,7 @@ rule collect_two_locus_sims_european:
 rule full_two_locus_bl_european:
     """Generating the full two-locus simulations for the correlation in number of mutations."""
     input:
-        expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne10000.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['Tennessen','IBDNeUK10K'], n0=1, na=1, ta=[0,233,1500], seed=[42], rec_rate=np.around(np.linspace(3,5,30), 2), nreps=5000)
+        expand(config['tmpdir'] + 'two_loci/demographies/{scenario}/two_locus_sims_n0{n0}_na{na}.ta{ta}.r_{rec_rate}.Ne10000.rep{nreps}.seed_{seed}.branch_length.npz', scenario=['Tennessen','IBDNeUK10K'], n0=1, na=1, ta=[0,233,1500], seed=[42], rec_rate=np.around(np.linspace(3,5,30), 2), nreps=20000)
         
 
 rule combine_branch_length_est_two_locus_european:
