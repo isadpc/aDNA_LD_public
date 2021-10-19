@@ -82,8 +82,6 @@ rule monte_carlo_sasb_sims_v2:
                         se_r=se_r)
 
 
-
-
 # Landing rule for generating the simulations ...
 rule estimate_monte_carlo_sA_sB_sims:
   input:
