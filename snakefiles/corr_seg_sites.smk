@@ -160,103 +160,9 @@ rule monte_carlo_sA_sB_results_v2:
     final_df.to_csv(str(output), index=False, header=final_df.columns)
 
 
-
-
-### --------- 2. Attempt to estimate parameters ----------- ###
-
-def stack_ragged(array_list, axis=0):
-    lengths = [np.shape(a)[axis] for a in array_list]
-    idx = np.cumsum(lengths[:-1])
-    stacked = np.concatenate(array_list, axis=axis)
-    return(stacked, idx)
-
-rule est_Ne_ta_1kb_sim_bootstrap_monte_carlo_loco:
-  """
-    Estimating the effective population size
-      and the age of the sample from correlation in segregating sites
-  """
-  input:
-    expand(config['tmpdir'] + 'hap_copying/hap_panels/{{scenario}}/hap_panel_{{mod_n}}_{{n_anc}}_{{ta}}_{{length}}_Ne_{{Ne}}_{seed}.npz', seed=np.arange(1,21))
-  output:
-    bootstrap_params=config['tmpdir'] + 'corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{full_seed,\d+}.monte_carlo_L{L}.N{N,\d+}.loco.npz'
-  wildcard_constraints:
-    scenario='(SerialConstant|TennessenEuropean)',
-    mod_n = '1',
-    n_anc = '1',
-    L = 1000,
-    length=20
-  run:
-    # 1. Generating the correlation object here
-    corr_sim = CorrSegSitesSims()
-    for f in tqdm(input):
-      corr_sim._load_data(f)
-    for i in tqdm(range(20)):
-      corr_sim.calc_windowed_seg_sites(chrom=i, L=int(wildcards.L))
-    for i in tqdm(range(20)):
-      corr_sim.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=5000, chrom=i, seed=int(wildcards.full_seed))
-
-    # TODO : should we store the intermediates here
-    # Leaving one chromosome out, out of 20
-    popt_reps = np.zeros(shape=(20,2))
-    rec_rate_mean_storage = []
-    corr_s1_s2_storage = []
-
-    # Actually running leave-one-chromosome out for testing
-    chroms = np.arange(20)
-    for i in tqdm(range(20)):
-      chroms_subsampled = np.delete(chroms, i, 0)
-
-      rec_rates_mean, _, corr_s1_s2, _ = corr_sim.gen_binned_rec_rate(chroms=chroms_subsampled, bins='auto', range=(1e-5,5e-3))
-      #Filter out the nan estimates here
-      # TODO : should we put in the weight here
-      non_nan_recs = ~np.isnan(rec_rates_mean)
-      non_nan_corr = ~np.isnan(corr_s1_s2)
-      rec_rates_mean = rec_rates_mean[non_nan_recs]
-      corr_s1_s2 = corr_s1_s2[non_nan_corr]
-      curpopt,_ = fit_constant_1kb(rec_rates_mean, corr_s1_s2, bounds=(0,[1e8,1e6]))
-      popt_reps[i,:] = curpopt
-      rec_rate_mean_storage.append(rec_rates_mean)
-      corr_s1_s2_storage.append(corr_s1_s2)
-    # stacking the arrays
-    stacked_rec_rates_mean, idx_rec_rates = stack_ragged(rec_rate_mean_storage)
-    stacked_corr_s1_s2_mean, idx_corr_s1_s2 = stack_ragged(corr_s1_s2_storage)
-
-    np.savez_compressed(output.bootstrap_params, scenario=wildcards.scenario, seed=np.int32(wildcards.full_seed), ta = np.int32(wildcards.ta), est_params=popt_reps, rec_rates_mean=stacked_rec_rates_mean, idx_rec_rates=idx_rec_rates, corr_s1_s2=stacked_corr_s1_s2_mean, idx_corr_s1_s2=idx_corr_s1_s2)
-
-
-rule est_Ne_ta_1kb_sim_final:
-  input:
-    expand(config['tmpdir'] + 'corr_seg_sites/est_ta/sims/{scenario}/corr_sA_Sb_{mod_n}_{n_anc}_{ta}_{length}_Ne_{Ne}_{full_seed}.monte_carlo_L{L}.N{N}.loco.npz', full_seed=42, Ne=10000, length=20, ta=[0,100,1000,10000], mod_n=1, n_anc=1, scenario=['SerialConstant', 'TennessenEuropean'], L=1000, N=200)
-
-rule collapse_est_ta_Ne:
-  input:
-    files = rules.est_Ne_ta_1kb_sim_final.input
-  output:
-    'results/corr_seg_sites/est_ta_Ne_corr_sa_sb.csv'
-  run:
-    tot_df_rows = []
-    for f in tqdm(input.files):
-      cur_df = np.load(f)
-      scenario = cur_df['scenario']
-      ta = cur_df['ta']
-      est_params = cur_df['est_params']
-      Ne_est = est_params[:,0]
-      ta_est = est_params[:,1]
-
-      mean_Ne = np.mean(Ne_est)
-      se_Ne = np.std(Ne_est, ddof=1)/ np.sqrt(Ne_est.size)
-      mean_ta = np.mean(ta_est)
-      se_ta = np.std(ta_est, ddof=1) / np.sqrt(ta_est.size)
-      cur_row = [scenario, ta, mean_ta, se_ta, mean_Ne, se_Ne]
-      tot_df_rows.append(cur_row)
-    final_df = pd.DataFrame(tot_df_rows, columns=['scenario','ta','ta_est','se_ta_est', 'Ne_est', 'se_Ne_est'])
-    final_df = final_df.dropna()
-    final_df.to_csv(str(output), index=False, header=final_df.columns)
-
-
-# -------------- 3. Estimation from Real Data --------------- #
+# -------------- 2. Estimation from Real Data --------------- #
 # Individuals who we want for our ancient samples
-anc_indivs = ['Loschbour', 'LBK','Bichon', 'UstIshim']
+anc_indivs = ['Loschbour', 'LBK', 'UstIshim']
 
 rec_bins = np.arange(0.01, 1.01, 0.01)
 rec_map_types = {"Physical_Pos" : np.uint64,
@@ -268,17 +174,6 @@ rec_map_types = {"Physical_Pos" : np.uint64,
                  "African_Enriched" : np.float32,
                  "Shared_Map" : np.float32}
 
-
-# #Directory of current data currently
-# data_dir = '/home/abiddanda/novembre_lab2/old_project/share/botai/data/vcfs/'
-# sgdp_dir = '/home/abiddanda/novembre_lab2/data/external_public/sgdp/merged/'
-# thousand_genomes_dir = '/home/abiddanda/novembre_lab2/data/external_public/1kg_phase3/haps/'
-# KGP_BIALLELIC = '/home/abiddanda/novembre_lab2/data/external_public/1kg_phase3/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.biallelic_snps.vcf.gz'
-
-# rule kg_phase3_ancient_merge:
-#   input:
-#     merged_vcf = 'data/raw_data/merged_kgp/ancient_kgp_total_merged.chr{CHROM}.vcf.gz',
-#     merged_vcf_idx = 'data/raw_data/merged_kgp/ancient_kgp_total_merged.chr{CHROM}.vcf.gz.tbi'
 
 rule gen_seg_sites_table_haploid_modern_test:
   """
@@ -350,7 +245,7 @@ rule haploid_modern_test:
     Generating the haploid modern testing setup
   """
   input:
-    expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap}.test.npz', ANC=['LBK', 'Bichon', 'Loschbour', 'UstIshim', 'NA12878'], MOD=['NA12830'], recmap='deCODE', proj='kgp', hap=[1], CHROM=np.arange(1,23))
+    expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap}.test.npz', ANC=['LBK', 'Loschbour', 'UstIshim', 'NA12878'], MOD=['NA12830'], recmap='deCODE', proj='kgp', hap=[1], CHROM=np.arange(1,23))
 
 
 rule diploid_modern_test:
