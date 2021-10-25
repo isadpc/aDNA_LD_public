@@ -284,7 +284,7 @@ rule monte_carlo_sA_sB_est_haploid_autosomes:
     cur_corr._conv_cM_to_morgans()
     for i in tqdm(cur_corr.chrom_pos_dict):
       cur_corr.calc_windowed_seg_sites(chrom=i, mask=input.mask)
-      cur_corr.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=2000, chrom=i, seed=int(wildcards.seed))
+      cur_corr.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=5000, chrom=i, seed=int(wildcards.seed))
     # Computing the monte-carlo estimates that we have
     xs = np.logspace(-5.0, -2.0, 30)
     rec_rate_mean, rec_rate_se, corr_s1_s2, se_r = cur_corr.gen_binned_rec_rate(bins=xs)
@@ -310,7 +310,10 @@ rule monte_carlo_real_data_1kg_samples:
 rule monte_carlo_real_data_v2_samples:
   input:
     expand(config['tmpdir'] +
-            'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=['LBK', 'UstIshim'], MOD=['SS6004468', 'SS6004474'], recmap='deCODE', mask=['centromere','pilot'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50]),
+            'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz',
+            ANC=['LBK', 'UstIshim'], MOD=['SS6004468', 'SS6004474'],
+            recmap='deCODE', mask=['centromere','pilot'], proj='kgp', hap=[1],
+            seed=42,  L=1000, N=[100]),
     # expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=[test_ceu_1kg[0]], MOD=['SS6004468', 'SS6004474'], recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50])
 
 
