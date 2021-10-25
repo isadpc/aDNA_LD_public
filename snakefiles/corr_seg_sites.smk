@@ -16,6 +16,7 @@ configfile: "config.yml"
 
 # Some simulations rely on the sims for haplotype copying
 include: "hap_copying.smk"
+include: "wgs_data_prep.smk"
 
 # --- 1. Estimation from Simulations --- #
 rule monte_carlo_sasb_sims:
@@ -178,7 +179,8 @@ rule gen_seg_sites_table_haploid_modern_test:
     Calculate table of segregating sites when we have a modern haplotype
   """
   input:
-    vcf = 'data/raw_data/merged_wgs_ancient/ancient_kgp_total_merged.chr{CHROM}.vcf.gz',
+    vcf = rules.extract_autosomes.output.vcf, 
+    # vcf = 'data/raw_data/merged_wgs_ancient/ancient_kgp_total_merged.chr{CHROM}.vcf.gz',
     rec_df = 'data/raw_data/full_recomb_maps/maps_chr.{CHROM}'
   output:
     tmp_vcf = temp(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap,\d+}.vcf.gz'),
@@ -186,11 +188,11 @@ rule gen_seg_sites_table_haploid_modern_test:
     pos_ac = config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap,\d+}.test.npz'
   wildcard_constraints:
     recmap = '(COMBINED_LD|deCODE)',
-    proj = 'kgp'
+  threads: 4
   run:
     # 1. Generate the filtered VCF here ...
     indiv_ids = "%s,%s" % (wildcards.ANC, wildcards.MOD)
-    shell('bcftools view -s {indiv_ids} -c 1:minor {input.vcf} | bgzip -@10 > {output.tmp_vcf}')
+    shell('bcftools view -s {indiv_ids} -c 1:minor {input.vcf} | bgzip -@4 > {output.tmp_vcf}')
     shell('tabix -f {output.tmp_vcf}')
     # 2. Look and read in the data set
     vcf_data = allel.read_vcf(output.tmp_vcf)
@@ -207,12 +209,13 @@ rule gen_seg_sites_table_haploid_modern_test:
     interp_rec_pos = np.interp(pos, rec_pos, rec_dist)
     np.savez_compressed(output.pos_ac, chrom=chrom, pos=pos, gt_anc=gt_anc, gt_mod_hap=gt_mod_hap, rec_pos=interp_rec_pos)
 
+
 rule gen_seg_sites_table_diploid_test:
   """
     Calculates segregating sites within diploid samples in a way similar to the haploid version above
   """
   input:
-    vcf = 'data/raw_data/merged_wgs_ancient/ancient_kgp_total_merged.chr{CHROM}.vcf.gz',
+    vcf = rules.extract_autosomes.output.vcf,
     rec_df = 'data/raw_data/full_recomb_maps/maps_chr.{CHROM}'
   output:
     tmp_vcf = temp(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.vcf.gz'),
@@ -243,7 +246,7 @@ rule haploid_modern_test:
     Generating the haploid modern testing setup
   """
   input:
-    expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap}.test.npz', ANC=['LBK', 'Loschbour', 'UstIshim', 'NA12878'], MOD=['NA12830'], recmap='deCODE', proj='kgp', hap=[1], CHROM=np.arange(1,23))
+    expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap}.test.npz', ANC=['LBK', 'UstIshim'], MOD=['SS6004468', 'SS6004474'], recmap='deCODE', proj='kgp', hap=[1], CHROM=range(1,23))
 
 
 rule diploid_modern_test:
@@ -251,7 +254,7 @@ rule diploid_modern_test:
     Generating the diploid testing setup
   """
   input:
-    expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.test.npz', CHROM=np.arange(1,23), ANC=['LBK', 'UstIshim'], MOD=['NA12830'], recmap='deCODE', proj='kgp')
+    expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.test.npz', CHROM=range(1,23), ANC=['LBK', 'UstIshim'], MOD=['SS6004468', 'SS6004474'], recmap='deCODE', proj='kgp')
 
 
 PILOT_MASK = 'data/raw_data/genome_masks/pilot_exclusion_mask.renamed.bed'
@@ -283,9 +286,11 @@ rule monte_carlo_sA_sB_est_haploid_autosomes:
       cur_corr.calc_windowed_seg_sites(chrom=i, mask=input.mask)
       cur_corr.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=2000, chrom=i, seed=int(wildcards.seed))
     # Computing the monte-carlo estimates that we have
-    xs = np.logspace(-5.0, -3, 30)
+    xs = np.logspace(-5.0, -2.0, 30)
     rec_rate_mean, rec_rate_se, corr_s1_s2, se_r = cur_corr.gen_binned_rec_rate(bins=xs)
-    np.savez_compressed(output.corr_SASB, rec_rate_mean=rec_rate_mean, rec_rate_se=rec_rate_se, corr_s1_s2=corr_s1_s2, se_r=se_r)
+    np.savez_compressed(output.corr_SASB, rec_rate_mean=rec_rate_mean,
+            rec_rate_se=rec_rate_se, corr_s1_s2=corr_s1_s2, se_r=se_r,
+            mask=wildcards.mask)
 
 
 # Testing out with multiple samples in there ...
@@ -297,14 +302,16 @@ test_ceu_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'CEU']['sample'].values
 test_gih_1kg = pop_1kg_df[pop_1kg_df['pop'] == 'GIH']['sample'].values[:3]
 test_indivs_1kg = np.hstack([test_yri_1kg, test_chb_1kg, test_ceu_1kg, test_gih_1kg])
 
-# np.array('NA12830')
-print(test_ceu_1kg)
-
 rule monte_carlo_real_data_1kg_samples:
   input:
     expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=['LBK', 'UstIshim'], MOD=test_indivs_1kg, recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50]),
     expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=[test_ceu_1kg[0]], MOD=test_ceu_1kg[1:], recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50])
 
+rule monte_carlo_real_data_v2_samples:
+  input:
+    expand(config['tmpdir'] +
+            'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=['LBK', 'UstIshim'], MOD=['SS6004468', 'SS6004474'], recmap='deCODE', mask=['centromere','pilot'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50]),
+    # expand(config['tmpdir'] + 'corr_seg_sites/monte_carlo_results/anc_{ANC}_mod_{MOD}/autosomes.paired_seg_sites.{proj}.{recmap}.{mask}.hap{hap}.seed{seed}.monte_carlo_L{L}.N{N}.npz', ANC=[test_ceu_1kg[0]], MOD=['SS6004468', 'SS6004474'], recmap='deCODE', mask=['centromere'], proj='kgp', hap=[1], seed=42,  L=1000, N=[50])
 
 
 rule concatenate_tot_corr_piA_piB:
@@ -334,5 +341,39 @@ rule concatenate_tot_corr_piA_piB:
         except:
           pass
     df = pd.DataFrame(tot_df_rows, columns=['ANC_ID','MOD_ID','rec_rate_mean','rec_rate_se', 'corr_piA_piB', 'se_corr_piA_piB'])
+    final_df = df.dropna()
+    final_df.to_csv(str(output), index=False, header=final_df.columns)
+
+
+rule concatenate_tot_corr_piA_piB_v2:
+  input:
+    files = rules.monte_carlo_real_data_v2_samples.input
+  output:
+    'results/corr_seg_sites/monte_carlo_est_LBK_UstIshim_modern.v2.csv'
+  run:
+    tot_df_rows = []
+    for a in ['LBK','UstIshim']:
+      # Getting only files with that filename on them
+      valid_files = [x for x in input.files if a in x]
+      for x in tqdm(['SS6004468', 'SS6004474']):
+        fname = [y for y in valid_files if x in y]
+        try:
+          assert(len(fname) >= 1)
+          for f in fname:
+            df = np.load(f)
+            rec_rate_mean = df['rec_rate_mean']
+            mean_corr_s1_s2 = df['corr_s1_s2']
+            rec_rate_se = df['rec_rate_se']
+            se_r = df['se_r']
+            mask = df['mask']
+            assert(rec_rate_mean.size == mean_corr_s1_s2.size)
+            for i in range(rec_rate_mean.size):
+                cur_row = [a,x,rec_rate_mean[i], rec_rate_se[i], mean_corr_s1_s2[i], se_r[i], mask]
+                tot_df_rows.append(cur_row)
+        except:
+          pass
+    df = pd.DataFrame(tot_df_rows,
+            columns=['ANC_ID','MOD_ID','rec_rate_mean','rec_rate_se',
+                'corr_piA_piB', 'se_corr_piA_piB', 'mask'])
     final_df = df.dropna()
     final_df.to_csv(str(output), index=False, header=final_df.columns)
