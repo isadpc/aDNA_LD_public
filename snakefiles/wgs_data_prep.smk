@@ -11,7 +11,7 @@ import allel
 import pandas as pd
 
 # Individuals who we want for our ancient samples
-anc_indivs = ['Loschbour', 'LBK', 'UstIshim']
+anc_indivs = ['Loschbour', 'LBK', 'UstIshim','8.4_BGI_WG', 'Yamnaya']
 
 # Choosing modern french individuals
 mod_indivs_damgaard = ['HGDP00456', 'HGDP00521', 'HGDP00542', 'HGDP00665',
@@ -48,12 +48,14 @@ rule extract_autosomes:
   input:
     data_dir + 'samtools.combined.chr{CHROM}.release1.rn.vcf.gz'
   output:
+    stats = 'data/raw_data/tmp_staging/ancient_data.chr{CHROM,\d+}.damgaard.stats.gz',
     vcf = 'data/raw_data/tmp_staging/ancient_data.chr{CHROM,\d+}.damgaard.vcf.gz',
     idx = 'data/raw_data/tmp_staging/ancient_data.chr{CHROM,\d+}.damgaard.vcf.gz.tbi'
   threads: 4
   run:
     indiv_str = ','.join(anc_indivs) + ',' +  ','.join(mod_indivs_damgaard)
-    shell('bcftools view --threads 4 -v snps -m2 -M2 -s {indiv_str} {input} | bcftools annotate -x INFO,^FORMAT/GT |  bgzip -@4 > {output.vcf}')
+    shell('bcftools stats -s - {input} | gzip > {output.stats}')
+    shell('bcftools view --threads 4 -s {indiv_str} {input} | bcftools annotate -x INFO,^FORMAT/GT |  bgzip -@4 > {output.vcf}')
     shell('tabix {output.vcf}')
 
 rule kg_phase3_ancient_merge:
@@ -69,7 +71,7 @@ rule kg_phase3_ancient_merge:
   threads: 4
   shell:
     """
-    bcftools merge -0 {input.anc_vcf} {input.kg_phase3_vcf} -Ou | bcftools view -c 1:minor -m2 -M2 -v snps | bcftools annotate -x INFO,^FORMAT/GT | bgzip -@4 > {output.merged_vcf}
+    bcftools merge -0 {input.anc_vcf} {input.kg_phase3_vcf} -Ou | bcftools view -m2 -M2 -v snps | bcftools annotate -x INFO,^FORMAT/GT | bgzip -@4 > {output.merged_vcf}
     tabix -f {output.merged_vcf}
     """
 

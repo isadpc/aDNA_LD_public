@@ -1,5 +1,7 @@
+#!python3
+
 """
-  Estimating jump-rates for the LS Model
+    Extracting Male X-Chromosome data from Reich et al. 
 """
 
 import os
@@ -22,9 +24,6 @@ rec_map_types = {"Physical_Pos" : np.uint64,
                  "AA_Map": np.float32,
                  "African_Enriched" : np.float32,
                  "Shared_Map" : np.float32}
-
-# TODO : since raw_data is ignored in the repo - should we have a setting where we allow the user to wget the data from dropbox or something?
-
 
 rule filt_male_1240k_x_chrom:
   """
