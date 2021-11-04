@@ -6,6 +6,7 @@ import numpy as np
 from tqdm import tqdm
 import pandas as pd
 import allel
+from cyvcf2 import VCF
 
 sys.path.append('src/')
 from seg_sites_covar import *
@@ -189,18 +190,28 @@ rule gen_seg_sites_table_haploid_modern_test:
   wildcard_constraints:
     recmap = '(COMBINED_LD|deCODE)',
   threads: 4
+  resources:
+      mem_mb=12000,
+      disk_mb=8000
   run:
     # 1. Generate the filtered VCF here ...
     indiv_ids = "%s,%s" % (wildcards.ANC, wildcards.MOD)
-    shell('bcftools view -s {indiv_ids} -c 1:minor {input.vcf} | bgzip -@4 > {output.tmp_vcf}')
+    shell('bcftools view -s {indiv_ids} --threads 4 {input.vcf} | bcftools view -v snps -c 1:minor --threads 4 | bgzip -@4 > {output.tmp_vcf}')
     shell('tabix -f {output.tmp_vcf}')
     # 2. Look and read in the data set
-    vcf_data = allel.read_vcf(output.tmp_vcf)
-    gt = vcf_data['calldata/GT']
-    pos = vcf_data['variants/POS']
-    chrom = vcf_data['variants/CHROM']
-    gt_anc = gt[:,0,0] + gt[:,0,1]
-    gt_mod_hap = gt[:,1,int(wildcards.hap)]
+    pos = []
+    chrom = []
+    gt_anc = []
+    gt_mod_hap = []
+    for variant in tqdm(VCF(str(output.tmp_vcf), threads=2)):
+        pos.append(variant.start)
+        chrom.append(variant.CHROM)
+        gt_anc.append(variant.genotypes[0][0] + variant.genotypes[0][1])
+        gt_mod_hap.append(variant.genotypes[1][int(wildcards.hap)])
+    pos = np.array(pos, dtype=np.uint32)
+    chrom = np.array(chrom)
+    gt_anc = np.array(gt_anc, dtype=np.uint32)
+    gt_mod_hap = np.array(gt_mod_hap, dtype=np.uint32)
 
     # generate recombination rates here
     rec_df = pd.read_csv(input.rec_df, sep='\s+', low_memory=True, dtype=rec_map_types)
@@ -210,35 +221,41 @@ rule gen_seg_sites_table_haploid_modern_test:
     np.savez_compressed(output.pos_ac, chrom=chrom, pos=pos, gt_anc=gt_anc, gt_mod_hap=gt_mod_hap, rec_pos=interp_rec_pos)
 
 
-rule gen_seg_sites_table_diploid_test:
-  """
-    Calculates segregating sites within diploid samples in a way similar to the haploid version above
-  """
-  input:
-    vcf = rules.extract_autosomes.output.vcf,
-    rec_df = 'data/raw_data/full_recomb_maps/maps_chr.{CHROM}'
-  output:
-    tmp_vcf = temp(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.vcf.gz'),
-    tmp_vcf_idx = temp(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.vcf.gz.tbi'),
-    pos_ac = config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.test.npz'
-  wildcard_constraints:
-    recmap = '(COMBINED_LD|deCODE)',
-    proj = 'kgp'
-  run:
-    indiv_ids = "%s,%s" % (wildcards.ANC, wildcards.MOD)
-    shell('bcftools view -s {indiv_ids} -c 1:minor {input.vcf} | bgzip > {output.tmp_vcf}; tabix -f {output.tmp_vcf}')
-    vcf_data = allel.read_vcf(output.tmp_vcf)
-    gt = vcf_data['calldata/GT']
-    pos = vcf_data['variants/POS']
-    chrom = vcf_data['variants/CHROM']
-    gt_anc = gt[:,0,0] + gt[:,0,1]
-    gt_mod = gt[:,1,0] + gt[:,1,1]
-    # generate recombination rates here
-    rec_df = pd.read_csv(input.rec_df, sep='\s+', low_memory=True, dtype=rec_map_types)
-    rec_pos = np.array(rec_df['Physical_Pos'], dtype=np.uint32)
-    rec_dist = np.array(rec_df[str(wildcards.recmap)], dtype=np.float32)
-    interp_rec_pos = np.interp(pos, rec_pos, rec_dist)
-    np.savez_compressed(output.pos_ac, chrom=chrom, pos=pos, gt_anc=gt_anc, gt_mod=gt_mod, rec_pos=interp_rec_pos)
+# rule gen_seg_sites_table_diploid_test:
+  # """
+    # Calculates segregating sites within diploid samples in a way similar to the haploid version above
+  # """
+  # input:
+    # vcf = rules.extract_autosomes.output.vcf,
+    # rec_df = 'data/raw_data/full_recomb_maps/maps_chr.{CHROM}'
+  # output:
+    # tmp_vcf = temp(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.vcf.gz'),
+    # tmp_vcf_idx = temp(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.vcf.gz.tbi'),
+    # pos_ac = config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.test.npz'
+  # wildcard_constraints:
+    # recmap = '(COMBINED_LD|deCODE)',
+    # proj = 'kgp'
+  # run:
+    # indiv_ids = "%s,%s" % (wildcards.ANC, wildcards.MOD)
+    # shell('bcftools view -s {indiv_ids} -c 1:minor {input.vcf} | bgzip -@4 > {output.tmp_vcf}; tabix -f {output.tmp_vcf}')
+    # pos = []
+    # chrom = []
+    # for variant in tqdm(VCF(str(output.tmp_vcf), threads=2)):
+        # chrom.append(variant.CHROM)
+        # pos.append(variant.start)
+
+    # # vcf_data = allel.read_vcf(output.tmp_vcf)
+    # gt = vcf_data['calldata/GT']
+    # pos = vcf_data['variants/POS']
+    # chrom = vcf_data['variants/CHROM']
+    # gt_anc = gt[:,0,0] + gt[:,0,1]
+    # gt_mod = gt[:,1,0] + gt[:,1,1]
+    # # generate recombination rates here
+    # rec_df = pd.read_csv(input.rec_df, sep='\s+', low_memory=True, dtype=rec_map_types)
+    # rec_pos = np.array(rec_df['Physical_Pos'], dtype=np.uint32)
+    # rec_dist = np.array(rec_df[str(wildcards.recmap)], dtype=np.float32)
+    # interp_rec_pos = np.interp(pos, rec_pos, rec_dist)
+    # np.savez_compressed(output.pos_ac, chrom=chrom, pos=pos, gt_anc=gt_anc, gt_mod=gt_mod, rec_pos=interp_rec_pos)
 
 
 rule haploid_modern_test:
@@ -246,7 +263,7 @@ rule haploid_modern_test:
     Generating the haploid modern testing setup
   """
   input:
-    expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap}.test.npz', ANC=['LBK', 'UstIshim'], MOD=['SS6004468', 'SS6004474'], recmap='deCODE', proj='kgp', hap=[1], CHROM=range(1,23))
+    expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.haploid_modern_{hap}.test.npz', ANC=['LBK', 'UstIshim'], MOD=['SS6004468', 'SS6004474','8.4_BGI_WG','Yamnaya'], recmap='deCODE', proj='kgp', hap=[1], CHROM=range(1,23))
 
 
 rule diploid_modern_test:
@@ -254,7 +271,7 @@ rule diploid_modern_test:
     Generating the diploid testing setup
   """
   input:
-    expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.test.npz', CHROM=range(1,23), ANC=['LBK', 'UstIshim'], MOD=['SS6004468', 'SS6004474'], recmap='deCODE', proj='kgp')
+    expand(config['tmpdir'] + 'corr_seg_sites/real_data/anc_{ANC}_mod_{MOD}/interpolated_{proj}_{recmap}_chr{CHROM}.diploid.test.npz', CHROM=range(1,23), ANC=['LBK', 'UstIshim'], MOD=['SS6004468', 'SS6004474', ''], recmap='deCODE', proj='kgp')
 
 
 PILOT_MASK = 'data/raw_data/genome_masks/pilot_exclusion_mask.renamed.bed'

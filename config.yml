@@ -1,4 +1,4 @@
-tmpdir: /scratch/midway2/abiddanda/aDNA_LD/
+tmpdir: /project2/jnovembre/abiddanda/aDNA_LD/
 recmaps:
   deCODE:
     chr22: data/recmaps/chr22_deCODE.map.txt
