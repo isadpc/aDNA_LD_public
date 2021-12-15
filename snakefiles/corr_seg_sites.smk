@@ -817,30 +817,55 @@ rule sim_mod_haploid_anc_haploid:
         )
 
 
-
-
 rule monte_carlo_sA_sB_est_haploid_chromosomes_test2:
-  """
+    """
     Estimate of the Monte-Carlo correlation in sA  vs. sB for all chromosomes
-  """
-  input:
-    seg_sites_haploid = expand(config['tmpdir'] + "hap_copying/test_corr_haphap_hap_panels/{scenario}/hap_panel_{mod_n}_{n_anc}_{{ta}}_{length}_Ne_{Ne}_{seed}.npz" , mod_n=1, n_anc=1, Ne=10000, length=50, scenario='SerialConstant', seed=np.arange(1,20)),
-  output:
-    corr_SASB = config['tmpdir'] + 'corr_seg_sites/test_corr_haphap/autosomes.paired_seg_sites.hap0.ta{ta}.seed{seed,\d+}.monte_carlo_L{L,\d+}.N{N,\d+}.npz'
-  run:
-    cur_corr = CorrSegSitesSims()
-    for f in tqdm(input.seg_sites_haploid):
-      cur_corr._load_data(f)
-    # cur_corr._conv_cM_to_morgans()
-    for i in tqdm(cur_corr.chrom_pos_dict):
-      cur_corr.calc_windowed_seg_sites(chrom=i, mask=None)
-      cur_corr.monte_carlo_corr_SA_SB(L=int(wildcards.N), nreps=5000, chrom=i, seed=int(wildcards.seed))
-    # Computing the monte-carlo estimates that we have
-    xs = np.logspace(-5.0, -2.0, 30)
-    rec_rate_mean, rec_rate_se, corr_s1_s2, se_r = cur_corr.gen_binned_rec_rate(bins=xs)
-    np.savez_compressed(output.corr_SASB, rec_rate_mean=rec_rate_mean,
-            rec_rate_se=rec_rate_se, corr_s1_s2=corr_s1_s2, se_r=se_r)
+    """
+    input:
+        seg_sites_haploid=expand(
+            config["tmpdir"]
+            + "hap_copying/test_corr_haphap_hap_panels/{scenario}/hap_panel_{mod_n}_{n_anc}_{{ta}}_{length}_Ne_{Ne}_{seed}.npz",
+            mod_n=1,
+            n_anc=1,
+            Ne=10000,
+            length=50,
+            scenario="SerialConstant",
+            seed=np.arange(1, 20),
+        ),
+    output:
+        corr_SASB=config["tmpdir"]
+        + "corr_seg_sites/test_corr_haphap/autosomes.paired_seg_sites.hap0.ta{ta}.seed{seed,\d+}.monte_carlo_L{L,\d+}.N{N,\d+}.npz",
+    run:
+        cur_corr = CorrSegSitesSims()
+        for f in tqdm(input.seg_sites_haploid):
+            cur_corr._load_data(f)
+        # cur_corr._conv_cM_to_morgans()
+        for i in tqdm(cur_corr.chrom_pos_dict):
+            cur_corr.calc_windowed_seg_sites(chrom=i, mask=None)
+            cur_corr.monte_carlo_corr_SA_SB(
+                L=int(wildcards.N), nreps=5000, chrom=i, seed=int(wildcards.seed)
+            )
+        # Computing the monte-carlo estimates that we have
+        xs = np.logspace(-5.0, -2.0, 30)
+        rec_rate_mean, rec_rate_se, corr_s1_s2, se_r = cur_corr.gen_binned_rec_rate(
+            bins=xs
+        )
+        np.savez_compressed(
+            output.corr_SASB,
+            rec_rate_mean=rec_rate_mean,
+            rec_rate_se=rec_rate_se,
+            corr_s1_s2=corr_s1_s2,
+            se_r=se_r,
+        )
+
 
 rule test3:
-  input:
-    expand(config['tmpdir'] + 'corr_seg_sites/test_corr_haphap/autosomes.paired_seg_sites.hap0.ta{ta}.seed{seed}.monte_carlo_L{L}.N{N}.npz', L=1000, N=[200], ta=[100,500, 1000], seed=[1])
+    input:
+        expand(
+            config["tmpdir"]
+            + "corr_seg_sites/test_corr_haphap/autosomes.paired_seg_sites.hap0.ta{ta}.seed{seed}.monte_carlo_L{L}.N{N}.npz",
+            L=1000,
+            N=[200],
+            ta=[100, 500, 1000],
+            seed=[1],
+        ),

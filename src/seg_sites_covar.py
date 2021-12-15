@@ -484,8 +484,8 @@ class CorrSegSitesSims(CorrSegSites):
             # index of masked windows
             idx = np.random.randint(0, high=n_pos, size=int(p_haploid * n_pos))
             cur_weights[idx] = 0.5
-            self.chrom_weight_dict[c] = cur_weights            
-            
+            self.chrom_weight_dict[c] = cur_weights
+
 
 class CorrSegSitesRealDataHaploid(CorrSegSites):
     """Class for real data that is haploid."""
