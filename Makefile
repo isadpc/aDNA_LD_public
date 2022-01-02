@@ -47,7 +47,7 @@ two_locus_demographic:
 	 --execute --inplace notebooks/main_analyses/two_locus_demographic.ipynb
 
 #2. Supplementary Analysis notebooks
-supp_analyses: check_first_coal est_ta_Ne time_to_first_coal two_locus_divergence validate_equations ls_verify
+supp_analyses: check_first_coal est_ta_Ne time_to_first_coal two_locus_divergence validate_equations
 
 check_first_coal:
 	jupyter nbconvert --to notebook\

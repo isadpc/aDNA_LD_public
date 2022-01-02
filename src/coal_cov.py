@@ -117,7 +117,16 @@ class TwoLocusSerialDivergence(TwoLocusSimulation):
     """Simulation of Two-Locus model with divergence and serial sampling."""
 
     def __init__(
-        self, ta, Ne=1e4, t_div=0.0, rec_rate=1e-4, na=1, n0=1, eps=1e-6, reps=100
+        self,
+        ta,
+        Ne=1e4,
+        t_div=0.0,
+        rec_rate=1e-4,
+        na=1,
+        n0=1,
+        eps=1e-6,
+        m=1e-3,
+        reps=100,
     ):
         """Initialize the model with serial sampling.
 
@@ -153,6 +162,10 @@ class TwoLocusSerialDivergence(TwoLocusSimulation):
         self.samples2 = [msp.Sample(population=1, time=ta) for i in range(na)]
         self.samples = self.samples1 + self.samples2
         self.pop_config = [msp.PopulationConfiguration(), msp.PopulationConfiguration()]
+        if m <= 0:
+            self.migration_matrix = None
+        else:
+            self.migration_matrix = [[0, m], [m, 0]]
         self.demography = [msp.MassMigration(time=(ta + t_div + eps), source=1, dest=0)]
         self.treeseq = None
 
@@ -164,6 +177,7 @@ class TwoLocusSerialDivergence(TwoLocusSimulation):
         ts = msp.simulate(
             Ne=self.Ne,
             samples=self.samples,
+            migration_matrix=self.migration_matrix,
             population_configurations=self.pop_config,
             demographic_events=self.demography,
             recombination_map=recomb_map,
@@ -245,14 +259,16 @@ class TwoLocusSerialTennessen(TwoLocusSimulation):
         recomb_map = msp.RecombinationMap.uniform_map(
             self.loci, self.rec_rate, num_loci=self.loci
         )
-        self.treeseq = msp.simulate(
+        ts = msp.simulate(
             Ne=self.Ne,
             samples=self.samples,
             population_configurations=self.pop_config,
             demographic_events=self.demography,
             recombination_map=recomb_map,
             num_replicates=self.reps,
+            **kwargs
         )
+        return ts
 
     def _demography_debug(self):
         """Demography debugging."""
@@ -306,14 +322,16 @@ class TwoLocusSerialIBDNeUK10K(TwoLocusSimulation):
         recomb_map = msp.RecombinationMap.uniform_map(
             self.loci, self.rec_rate, num_loci=self.loci
         )
-        self.treeseq = msp.simulate(
+        ts = msp.simulate(
             Ne=self.Ne,
             samples=self.samples,
             demographic_events=self.demography,
             population_configurations=self.pop_config,
             recombination_map=recomb_map,
             num_replicates=self.reps,
+            **kwargs
         )
+        return ts
 
     def _demography_debug(self):
         """Demography debugging."""

@@ -160,12 +160,12 @@ class LiStephensHMM:
     f = lambda s : self._negative_logll(test_hap, scale=s, eps=eps)
     ta = minimize_scalar(f, **kwargs)
     return(ta)
-  
+
   def _infer_eps(self, test_hap, scale=1e2, **kwargs):
     """ Inferring error by numerically minimizing the negative log-likelihood """
     f = lambda e : self._negative_logll(test_hap, scale=scale, eps=e)
     ta = minimize_scalar(f, **kwargs)
-    return(ta)  
+    return(ta)
 
   def _infer_params(self,test_hap, **kwargs):
     """ Infer error parameter and scale parameter using numerical optimization """
