@@ -90,6 +90,59 @@ def _fwd_bwd_algo(haps, positions,test_hap, eps, nsamples, nsnps, scale):
     true_gammas[:,i] = np.exp(true_gammas[:,i])
   return(true_gammas)
 
+def _viterbi_helper (n_states, n_snps, positions, eps, scale, test_hap, panel_haps):
+  """helper function to compute the viterbi algorithm"""
+  # initialize
+  delta = np.zeros(shape=(n_states, n_snps))
+  delta[:,0] = [_emission_helper(test_hap[0], panel_haps[j,0], eps)-np.log(n_states) for j in range(n_states)]
+  arrows = np.ndarray(shape=(n_states, n_snps), dtype=object)
+  arrows[:,0] = 0
+
+  # main loop
+  previous_pos = positions[0]
+
+  for i in range(1, n_snps):
+
+    # calculate genetic dist between snps
+    gen_dist = positions[i] - previous_pos
+    rate = gen_dist*scale
+
+    # calculate log transition probs
+    log_trans = np.log((1-np.exp(-rate))/n_states)
+    log_no_trans = np.log(np.exp(-rate)+(1-np.exp(-rate))/n_states)
+
+    # create log transition matrix
+    trans_mat = np.full((n_states,n_states), log_trans)
+    np.fill_diagonal(trans_mat, log_no_trans)
+
+    for j in range(0, n_states):
+
+      # store prob
+      emission_prob = _emission_helper(test_hap[i], panel_haps[j][i], eps)
+      delta[j][i] = np.max(delta[:,i-1] + trans_mat[:,j] + emission_prob)
+      # store arrow
+      arrows[j][i] = np.argmax(delta[:,i-1] + trans_mat[:,j] + emission_prob)
+      # update genetic map position
+      previous_pos = positions[i]
+
+  # bactracking
+  path = []
+
+  max_state = np.argmax(delta[:, -1]) # Find the index of the max value in the last column of delta
+  max_value = delta[max_state, -1] # Find the max value in the last column of delta
+
+  path.append(str(max_state))
+
+  old_state = max_state
+
+  for i in range(n_snps-2, -1, -1): # desde la penultima snp hasta la primera
+
+    current_state = arrows[old_state][i+1]
+    path.append(str(current_state))
+    old_state = current_state
+
+    # return negloglikelihood and path
+  return max_value, path[::-1]
 
 class LiStephensHMM:
   """ Simple class to apply Li-Stephens HMM """
@@ -151,9 +204,9 @@ class LiStephensHMM:
     theta = self.theta
     nsamples = self.n_samples
     nsnps = self.n_snps
-    # Running compiled helper function with passed arguments for speed
-    gammas = _fwd_bwd_algo(haps, positions, test_hap, eps, nsamples, nsnps, scale)
-    return(gammas)
+    # (n_states, n_snps, positions, eps, scale, test_hap, panel_haps)
+    neg_ll, path = _viterbi_helper(nsamples, nsnps, positions, eps, scale, test_hap, haps)
+    return(neg_ll, path)
 
   def _infer_scale(self, test_hap, eps=0.001, **kwargs):
     """ Inferring scale by numerically minimizing the negative log-likelihood """
